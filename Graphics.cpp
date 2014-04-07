@@ -29,56 +29,85 @@ Graphics::Graphics(){
 	glEnable(GL_BLEND);
 	
 	try{
-		program = genShaders("shaders/vert.vert", "shaders/frag.frag");
+		baseProgram = genShaders("shaders/vert.vert", "shaders/frag.frag");
 	}catch(const char * e){
 		std::cout<<"Normal shader compile failed: " << e<<std::endl;
 	}
-	glUseProgram(program);
-	glUniform1i(glGetUniformLocation(program, "tex"), 0);
-	glUniform1i(glGetUniformLocation(program, "cubemap"), 1);
+	glUseProgram(baseProgram);
+	glUniform1i(glGetUniformLocation(baseProgram, "tex"), 0);
+	glUniform1i(glGetUniformLocation(baseProgram, "cubemap"), 1);
 	float aspect = 1024.f/768.f;
 	//matrix = glm::ortho<float>(-aspect, aspect, -1, 1, 0, 100) *glm::lookAt(glm::vec3(0,1,0.001), glm::vec3(0,0,0), glm::vec3(0,1,0));
 	//36,34,90 is good so keep it ok?
-	projection = glm::ortho<float>(-aspect*5, aspect*5, -5, 5, -20, 20);
-	view = glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*5,sin(M_PI*34/180.f)*5,5), glm::vec3(), glm::vec3(0,1,0));
-	const GLfloat vertices[] = {0, 0, 0, 0, 0,// 1, 1, 1,
-								1, 0, 0, 1, 0,// 1, 0, 0,
-								0, 0, 1, 0, 1,// 0, 1, 0,
-								1, 0, 1, 1, 1,// 0, 0, 1,
+	baseProjection = glm::ortho<float>(-aspect*5, aspect*5, -5, 5, -20, 20);
+	baseView = glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*5,sin(M_PI*34/180.f)*5,5), glm::vec3(), glm::vec3(0,1,0));
 
-								/*-0.5f, 0,-0.5f, 1, 1, 1,
-								 0.5f, 0,-0.5f, 1, 0, 0,
-								-0.5f, 1.f,-0.5f, 0, 1, 0,
-								 0.5f, 1.f,-0.5f, 0, 0, 1,*/
-	};
-	const GLuint indices[] = {0,1,2,
-							1,3,2,
-							/*4,5,6,
-							5,7,6,*/};
 
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+	try{
+		shadowProgram = genShaders("shaders/passShadow.vert", "shaders/passShadow.frag");
+	}catch(const char * e){
+		std::cout << e<<std::endl;
+	}
+	glGenFramebuffers(1, &shadowFrameBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFrameBuffer);
+	glDrawBuffer(GL_NONE);
 
-	glGenBuffers(1, &vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices[0], GL_STATIC_DRAW);
-	//3 because we need 3 floats per vertex
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 5, 0);
+	glGenTextures(1, &shadowCubemap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowCubemap);
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+
+	for(int i = 0; i <6; i++){
+		/*if(i==2 || i ==3){
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, GL_DEPTH_COMPONENT, 2, 2,0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+			//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, cubemap,0);
+			//glClear(GL_DEPTH_BUFFER_BIT);
+		}
+		else*/
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, GL_DEPTH_COMPONENT, 800, 800,0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+	}
+
+	shadowMapViews[1] = glm::lookAt(glm::vec3(0), glm::vec3(-1,0,0),glm::vec3(0,-1,0));
+	shadowMapViews[3] = glm::lookAt(glm::vec3(0), glm::vec3(0,-1,0),glm::vec3(0,0,1));
+	shadowMapViews[5] = glm::lookAt(glm::vec3(0), glm::vec3(0,0,-1),glm::vec3(0,-1,0));
+
+	shadowMapViews[0] = glm::lookAt(glm::vec3(0), glm::vec3(1,0,0),glm::vec3(0,-1,0));
+	shadowMapViews[2] = glm::lookAt(glm::vec3(0), glm::vec3(0,1,0),glm::vec3(0,0,-1));
+	shadowMapViews[4] = glm::lookAt(glm::vec3(0), glm::vec3(0,0,1),glm::vec3(0,-1,0));
+	/*glViewport(0,0,800,800);
+	for(int i = 0; i <2; i++){
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_Y+i, shadowCubemap,0);
+		glClear(GL_DEPTH_BUFFER_BIT);
+	}*/
+
+	//projectile test shit
+	GLfloat vert [] = {0,1,0,
+		1,1,1};
+	glGenVertexArrays(1, &projVao);
+	glBindVertexArray(projVao);
+	glGenBuffers(1, &projVbo);
+	glBindBuffer(GL_ARRAY_BUFFER, projVbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vert), vert, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) *5, (void*)(sizeof(GLfloat)*3));
-	glEnableVertexAttribArray(1);
-
-	glGenBuffers(1, &ebo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), &indices[0], GL_STATIC_DRAW);
 }
 
 Graphics::~Graphics(){
-	glDeleteBuffers(1, &vbo);
-	glDeleteBuffers(1, &ebo);
-	glDeleteVertexArrays(1, &vao);
+	glDeleteTextures(1, &shadowCubemap);
+	glDeleteFramebuffers(1, &shadowFrameBuffer);
+	glDeleteProgram(shadowProgram);
 
-	glDeleteProgram(program);
+	glDeleteProgram(baseProgram);
+
+	glDeleteVertexArrays(1, &projVao);
+	glDeleteBuffers(1, &projVbo);
 
 	glfwTerminate();
 }
@@ -94,13 +123,13 @@ glm::vec2 Graphics::getMouseTile(Map & map){
 	glm::vec3 win = glm::vec3( mouseX, 768 - mouseY, -20);
 	glm::vec4 viewport(0,0,1024,768);
 	glm::vec3 unprojectedNearZ = glm::unProject(win,
-		view,
-		projection,
+		baseView,
+		baseProjection,
 		viewport);
 	win[2] = 20;
 	glm::vec3 unprojectedFarZ = glm::unProject(win,
-		view,
-		projection,
+		baseView,
+		baseProjection,
 		viewport);
 
 
@@ -112,7 +141,40 @@ glm::vec2 Graphics::getMouseTile(Map & map){
 	return glm::vec2(std::floor(linePlaneIntersect.x), std::floor(linePlaneIntersect.z));
 }
 
+void Graphics::drawModel(const Model * model, const glm::mat4 & VP, bool useTex, GLuint prog, const glm::vec3 * colors = nullptr, int amount = 0){
+	glBindVertexArray(model->data->getVao());
+	glUniformMatrix4fv(glGetUniformLocation(prog, "M"), 1, GL_FALSE, glm::value_ptr(model->getModelMatrix()));
+	glUniformMatrix4fv(glGetUniformLocation(prog, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*model->getModelMatrix()));
+	for(int i = 0; i < model->data->getNumMeshes(); i++){
+		const IQM::iqmmesh &m = model->data->getMeshes()[i];
+		if(useTex){
+			glUniform3fv(glGetUniformLocation(prog, "color"), 1, glm::value_ptr(colors[std::min(i, amount-1)]));
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, model->data->getTexture(i));
+		}
+		glDrawElements(GL_TRIANGLES, m.num_triangles*3, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * m.first_triangle*3));
+	}
+}
 
+void Graphics::drawMap(const Map * map,const glm::mat4 & VP, bool useTex, GLuint prog){
+	glBindVertexArray(map->getVao());
+	if(useTex){
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, map->getTexture());
+	}
+	for(unsigned int y = 0; y < map->getHeight(); y++){
+		for(unsigned int x = 0; x < map->getWidth(); x++){
+			glm::mat4 M = glm::translate(glm::mat4(), glm::vec3(x, 0, y));
+			glUniformMatrix4fv(glGetUniformLocation(prog, "M"), 1, GL_FALSE, glm::value_ptr(M));
+			glUniformMatrix4fv(glGetUniformLocation(prog, "MVP"), 1, GL_FALSE, glm::value_ptr(VP * M));
+			if(useTex){
+				glm::vec3 color(1);
+				glUniform3fv(glGetUniformLocation(prog, "color"), 1, glm::value_ptr(color));
+			}
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		}
+	}
+}
 
 void Graphics::update(double dt){
 	int fx;
@@ -121,7 +183,7 @@ void Graphics::update(double dt){
 	static Map map("test.bin");
 	static Model building("building.iqm");
 	building.setPosition(glm::vec3(3,0,2.5));
-	building.setRotation(0,M_PI,0);
+	//building.setRotation(0,M_PI,0);
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)==GLFW_PRESS){
 		glm::vec2 pos = getMouseTile(map);
 		player->setPosition(pos.x, 0, pos.y);
@@ -142,105 +204,53 @@ void Graphics::update(double dt){
 		auto pos = player->getPosition();
 		player->setPosition(pos.x+1*dt, pos.y, pos.z);
 	}
-	glViewport(0,0,400,400);
-	glBindFramebuffer(GL_FRAMEBUFFER, player->frameBuffer);
-	glUseProgram(player->proggy);
+	//Shadow shit
+	glViewport(0,0,800,800);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFrameBuffer);
+	glUseProgram(shadowProgram);
 	glEnable(GL_DEPTH_TEST);
-	{
-		for(int j = 0; j < 6; j++){
-			if(j == 2)
-				j=4;
-			glm::mat4 wuew = glm::perspective<float>(90,1,0.1, 5)*glm::translate(player->sideViews[j], -player->getPosition()-glm::vec3(0.5,0.2,0.5));
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+j, player->cubemap,0);
-			glClear( GL_DEPTH_BUFFER_BIT);
-			glBindVertexArray(vao);
-			for(unsigned int y = 0; y < map.getHeight(); y++){
-				for(unsigned int x = 0; x < map.getWidth(); x++){
-					glm::mat4 MVP(glm::translate(wuew, glm::vec3(x, 0, y)));
-					glUniformMatrix4fv(glGetUniformLocation(player->proggy, "MVP"), 1, GL_FALSE, glm::value_ptr(MVP));
-					glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-				}
-			}
-
-			glBindVertexArray(building.data->getVao());
-			glUniformMatrix4fv(glGetUniformLocation(player->proggy, "MVP"), 1, GL_FALSE, glm::value_ptr(wuew*building.getModelMatrix()));
-			for(int i = 0; i < building.data->getNumMeshes(); i++){
-				const IQM::iqmmesh &m = building.data->getMeshes()[i];
-				glDrawElements(GL_TRIANGLES, m.num_triangles*3, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * m.first_triangle*3));
-			}
-		}
+	const glm::vec3 lightPos = player->getPosition() + glm::vec3(0.5,0.3, 0.5);
+	for(int i = 0; i < 6; i++){
+	//	i = i*2;
+		//for now, I think I will n eed all sides later
+		//if(i == 2)
+		//	i=4;
+		glm::mat4 wuew = glm::perspective<float>(90,1,0.01, 10)*glm::translate(shadowMapViews[i], -lightPos);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, shadowCubemap,0);
+		glClear( GL_DEPTH_BUFFER_BIT);
+		//unneeded ATM cuz map doesnt obscure anything(nohting below it)
+		drawMap(&map, wuew, false, shadowProgram);
+		drawModel(&building, wuew, false, shadowProgram);
 	}
+
+	//Normal draw shit
 	glDisable(GL_DEPTH_TEST);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glUseProgram(program);
+	glUseProgram(baseProgram);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	glViewport(0,0,1024, 768);
-	glBindVertexArray(vao);
+	//figure out (later) if I need this here or it can just be done once in init
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, player->cubemap);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, map.getTexture());
-	glUniform3fv(glGetUniformLocation(program, "lightPos"), 1, glm::value_ptr(player->getPosition()+glm::vec3(0.5,0.2,0.5)));
-	for(unsigned int y = 0; y < map.getHeight(); y++){
-		for(unsigned int x = 0; x < map.getWidth(); x++){
-			glm::mat4 MVP = glm::translate(projection * view, glm::vec3(x, 0, y));
-			glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, glm::value_ptr(glm::translate(glm::mat4(), glm::vec3(x, 0, y))));
-			glUniformMatrix4fv(glGetUniformLocation(program, "MVP"), 1, GL_FALSE, glm::value_ptr(MVP));
-			glm::vec3 color(1);
-			/*switch(map(x,y)){
-			case 0:
-				color = glm::vec3(0.4,0.22,0.6);
-				break;
-			case 1:
-				color = glm::vec3(0,1,0);
-				break;
-			case 2:
-				color = glm::vec3(0,0,1);
-				break;
-			}*/
-			glUniform3fv(glGetUniformLocation(program, "color"), 1, glm::value_ptr(color));
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		}
-	}
-	glBindVertexArray(player->data->getVao());
-	glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, glm::value_ptr(player->getModelMatrix()));
-	glUniformMatrix4fv(glGetUniformLocation(program, "MVP"), 1, GL_FALSE, glm::value_ptr(projection * view*player->getModelMatrix()));
-	glUniform3fv(glGetUniformLocation(program, "color"), 1, glm::value_ptr(glm::vec3(1)));
-	for(int i = 0; i < player->data->getNumMeshes(); i++){
-		const IQM::iqmmesh &m = player->data->getMeshes()[i];
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, player->data->getTexture(i));
-		glDrawElements(GL_TRIANGLES, m.num_triangles*3, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * m.first_triangle*3));
-	}
-	glBindVertexArray(building.data->getVao());
-	glUniformMatrix4fv(glGetUniformLocation(program, "M"), 1, GL_FALSE, glm::value_ptr(building.getModelMatrix()));
-	glUniformMatrix4fv(glGetUniformLocation(program, "MVP"), 1, GL_FALSE, glm::value_ptr(projection*view*building.getModelMatrix()));
+	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowCubemap);
+	glUniform3fv(glGetUniformLocation(baseProgram, "lightPos"), 1, glm::value_ptr(lightPos));
+	const glm::mat4 VP = baseProjection * baseView;
+	drawMap(&map, VP, true, baseProgram);
+
+	drawModel(player,VP, true, baseProgram, &glm::vec3(1), 1);
 	glm::vec3 colors[5] = {
 		glm::vec3(0.5),
 		glm::vec3(0,0.8,0.7),
 		glm::vec3(0.5),
 		glm::vec3(0.5),
 		glm::vec3(0.5)};
-	for(int i = 0; i < building.data->getNumMeshes(); i++){
-		glUniform3fv(glGetUniformLocation(program, "color"), 1, glm::value_ptr(colors[i]));
-		const IQM::iqmmesh &m = building.data->getMeshes()[i];
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, building.data->getTexture(i));
-		glDrawElements(GL_TRIANGLES, m.num_triangles*3, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * m.first_triangle*3));
-	}
-	/*{
-		glUseProgram(player->rendproggy);
-		glClear(GL_DEPTH_BUFFER_BIT);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glBindVertexArray(player->vao);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, player->cubemap);
-		for(int i = 0; i < 4; i++){
-			glViewport(i*200,0,200,200);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-		}
-	}*/
+	drawModel(&building, VP, true, baseProgram, colors, 5);
 
+	//projectiel test shit
+	glBindVertexArray(projVao);
+	glUniform3fv(glGetUniformLocation(baseProgram, "color"), 1, glm::value_ptr(glm::vec3(1,0,0)));
+	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "M"), 1, GL_FALSE, glm::value_ptr(glm::mat4()));
+	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(VP));
+	glDrawArrays(GL_LINES, 0, 6);
 	glfwPollEvents();
 	glfwSwapBuffers(window);
 }
