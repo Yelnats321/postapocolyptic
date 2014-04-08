@@ -14,7 +14,7 @@ float VectorToDepthValue(vec3 Vec){
     vec3 AbsVec = abs(Vec);
     float LocalZcomp = max(AbsVec.x, max(AbsVec.y, AbsVec.z));
 
-    const float f = 10.0;
+    const float f = 5.0;
     const float n = 0.01;
     float NormZComp = (f+n) / (f-n) - (2*f*n)/(f-n)/LocalZcomp;
     return (NormZComp + 1.0) * 0.5;
@@ -22,5 +22,5 @@ float VectorToDepthValue(vec3 Vec){
 
 void main(){
 	outColor = vec4(color,1);
-	if(texture(cubemap, vec4( position - lightPos ,VectorToDepthValue(lightPos-position) - 0.0001))!= 1) outColor.a = 0.3;
+	if(texture(cubemap, vec4( position - lightPos ,VectorToDepthValue(lightPos-position) - 0.00009))!= 1) outColor.a = 0.3;
 }

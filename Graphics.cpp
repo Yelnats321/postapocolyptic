@@ -4,7 +4,18 @@
 #include "Player.h"
 #include "IQMFile.h"
 
-Graphics::Graphics(){
+Graphics::Graphics():
+//For the projection 
+Z_DEPTH(20), X_Y_DEPTH(5),
+//for the actual window
+WINDOW_WIDTH(1024), WINDOW_HEIGHT(768),
+//for the shadow cubemap
+SHADOW_CUBE_SIZE(800),
+//matrix = glm::ortho<float>(-aspect, aspect, -1, 1, 0, 100) *glm::lookAt(glm::vec3(0,1,0.001), glm::vec3(0,0,0), glm::vec3(0,1,0));
+//36,34,90 is good so keep it ok?
+baseProjection(glm::ortho<float>(-WINDOW_WIDTH/WINDOW_HEIGHT*X_Y_DEPTH, WINDOW_WIDTH/WINDOW_HEIGHT*X_Y_DEPTH, -X_Y_DEPTH, X_Y_DEPTH, -Z_DEPTH, Z_DEPTH)),
+baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/180.f)*X_Y_DEPTH,X_Y_DEPTH), glm::vec3(), glm::vec3(0,1,0)))
+{
 	glfwInit();
 	glfwWindowHint(GLFW_SAMPLES, 4); // 4x antialiasing
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
@@ -12,7 +23,7 @@ Graphics::Graphics(){
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); //We don't want the old OpenGL
 
 	// Open a window and create its OpenGL context
-	window = glfwCreateWindow( 1024, 768, "Fallout Kinda", NULL, NULL );
+	window = glfwCreateWindow( WINDOW_WIDTH, WINDOW_HEIGHT, "Fallout Kinda", NULL, NULL );
 
 	glfwMakeContextCurrent(window);
 
@@ -27,7 +38,7 @@ Graphics::Graphics(){
 	glClearColor(0.95f,0.95f,0.95f, 1);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_BLEND);
-	
+
 	try{
 		baseProgram = genShaders("shaders/vert.vert", "shaders/frag.frag");
 	}catch(const char * e){
@@ -36,11 +47,6 @@ Graphics::Graphics(){
 	glUseProgram(baseProgram);
 	glUniform1i(glGetUniformLocation(baseProgram, "tex"), 0);
 	glUniform1i(glGetUniformLocation(baseProgram, "cubemap"), 1);
-	float aspect = 1024.f/768.f;
-	//matrix = glm::ortho<float>(-aspect, aspect, -1, 1, 0, 100) *glm::lookAt(glm::vec3(0,1,0.001), glm::vec3(0,0,0), glm::vec3(0,1,0));
-	//36,34,90 is good so keep it ok?
-	baseProjection = glm::ortho<float>(-aspect*5, aspect*5, -5, 5, -20, 20);
-	baseView = glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*5,sin(M_PI*34/180.f)*5,5), glm::vec3(), glm::vec3(0,1,0));
 
 
 	try{
@@ -60,18 +66,12 @@ Graphics::Graphics(){
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	
+
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
 
 	for(int i = 0; i <6; i++){
-		/*if(i==2 || i ==3){
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, GL_DEPTH_COMPONENT, 2, 2,0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-			//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, cubemap,0);
-			//glClear(GL_DEPTH_BUFFER_BIT);
-		}
-		else*/
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, GL_DEPTH_COMPONENT, 800, 800,0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, GL_DEPTH_COMPONENT, SHADOW_CUBE_SIZE, SHADOW_CUBE_SIZE,0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
 	}
 
 	shadowMapViews[1] = glm::lookAt(glm::vec3(0), glm::vec3(-1,0,0),glm::vec3(0,-1,0));
@@ -81,15 +81,10 @@ Graphics::Graphics(){
 	shadowMapViews[0] = glm::lookAt(glm::vec3(0), glm::vec3(1,0,0),glm::vec3(0,-1,0));
 	shadowMapViews[2] = glm::lookAt(glm::vec3(0), glm::vec3(0,1,0),glm::vec3(0,0,-1));
 	shadowMapViews[4] = glm::lookAt(glm::vec3(0), glm::vec3(0,0,1),glm::vec3(0,-1,0));
-	/*glViewport(0,0,800,800);
-	for(int i = 0; i <2; i++){
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_Y+i, shadowCubemap,0);
-		glClear(GL_DEPTH_BUFFER_BIT);
-	}*/
 
 	//projectile test shit
-	GLfloat vert [] = {0,1,0,
-		1,1,1};
+	GLfloat vert [] = {0,0.2,0,
+		1,0.2,1};
 	glGenVertexArrays(1, &projVao);
 	glBindVertexArray(projVao);
 	glGenBuffers(1, &projVbo);
@@ -117,16 +112,16 @@ void Graphics::processInput(){
 		glfwSetWindowShouldClose(window, 1);
 }
 
-glm::vec2 Graphics::getMouseTile(Map & map){
+glm::vec2 Graphics::getMouseTile(Map & map, float height = 0.f){
 	double mouseX, mouseY;
 	glfwGetCursorPos(window, &mouseX, &mouseY);
-	glm::vec3 win = glm::vec3( mouseX, 768 - mouseY, -20);
-	glm::vec4 viewport(0,0,1024,768);
+	glm::vec3 win = glm::vec3( mouseX, WINDOW_HEIGHT - mouseY, -Z_DEPTH);
+	glm::vec4 viewport(0,0,WINDOW_WIDTH,WINDOW_HEIGHT);
 	glm::vec3 unprojectedNearZ = glm::unProject(win,
 		baseView,
 		baseProjection,
 		viewport);
-	win[2] = 20;
+	win[2] = Z_DEPTH;
 	glm::vec3 unprojectedFarZ = glm::unProject(win,
 		baseView,
 		baseProjection,
@@ -137,8 +132,7 @@ glm::vec2 Graphics::getMouseTile(Map & map){
 
 	float t = unprojectedNearZ.y/(-dir.y);
 	glm::vec3 linePlaneIntersect = unprojectedNearZ + (dir*t); 
-
-	return glm::vec2(std::floor(linePlaneIntersect.x), std::floor(linePlaneIntersect.z));
+	return glm::vec2(linePlaneIntersect.x, linePlaneIntersect.z);
 }
 
 void Graphics::drawModel(const Model * model, const glm::mat4 & VP, bool useTex, GLuint prog, const glm::vec3 * colors = nullptr, int amount = 0){
@@ -182,11 +176,17 @@ void Graphics::update(double dt){
 		std::cout<<"-OGL ERROR! "<<fx<<std::endl;
 	static Map map("test.bin");
 	static Model building("building.iqm");
-	building.setPosition(glm::vec3(3,0,2.5));
+	building.setPosition(glm::vec3(1,0,1));
 	//building.setRotation(0,M_PI,0);
-	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)==GLFW_PRESS){
+	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) ==GLFW_PRESS){
+		glm::vec2 diff = getMouseTile(map) - glm::vec2(player->getPosition().x+0.5, player->getPosition().z+0.5);
+		projOffset = glm::translate(glm::mat4(), player->getPosition() + glm::vec3(0.5, 0, 0.5));
+		projOffset = glm::scale(projOffset, glm::vec3(diff.x, 1, diff.y));
+		std::cout<<diff.x<< " " <<diff.y<<std::endl;
+	}
+	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)==GLFW_PRESS){
 		glm::vec2 pos = getMouseTile(map);
-		player->setPosition(pos.x, 0, pos.y);
+		player->setPosition(std::floor(pos.x), 0, std::floor(pos.y));
 	}
 	if(glfwGetKey(window, GLFW_KEY_W)==GLFW_PRESS){
 		auto pos = player->getPosition();
@@ -205,17 +205,17 @@ void Graphics::update(double dt){
 		player->setPosition(pos.x+1*dt, pos.y, pos.z);
 	}
 	//Shadow shit
-	glViewport(0,0,800,800);
+	glViewport(0,0,SHADOW_CUBE_SIZE,SHADOW_CUBE_SIZE);
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFrameBuffer);
 	glUseProgram(shadowProgram);
 	glEnable(GL_DEPTH_TEST);
 	const glm::vec3 lightPos = player->getPosition() + glm::vec3(0.5,0.3, 0.5);
 	for(int i = 0; i < 6; i++){
-	//	i = i*2;
+		//	i = i*2;
 		//for now, I think I will n eed all sides later
 		//if(i == 2)
 		//	i=4;
-		glm::mat4 wuew = glm::perspective<float>(90,1,0.01, 10)*glm::translate(shadowMapViews[i], -lightPos);
+		glm::mat4 wuew = glm::perspective<float>(90,1,0.01, 5)*glm::translate(shadowMapViews[i], -lightPos);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, shadowCubemap,0);
 		glClear( GL_DEPTH_BUFFER_BIT);
 		//unneeded ATM cuz map doesnt obscure anything(nohting below it)
@@ -224,11 +224,11 @@ void Graphics::update(double dt){
 	}
 
 	//Normal draw shit
-	glDisable(GL_DEPTH_TEST);
+	//glDisable(GL_DEPTH_TEST);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glUseProgram(baseProgram);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-	glViewport(0,0,1024, 768);
+	glViewport(0,0,WINDOW_WIDTH, WINDOW_HEIGHT);
 	//figure out (later) if I need this here or it can just be done once in init
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowCubemap);
@@ -248,8 +248,8 @@ void Graphics::update(double dt){
 	//projectiel test shit
 	glBindVertexArray(projVao);
 	glUniform3fv(glGetUniformLocation(baseProgram, "color"), 1, glm::value_ptr(glm::vec3(1,0,0)));
-	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "M"), 1, GL_FALSE, glm::value_ptr(glm::mat4()));
-	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(VP));
+	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "M"), 1, GL_FALSE, glm::value_ptr(projOffset));
+	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*projOffset));
 	glDrawArrays(GL_LINES, 0, 6);
 	glfwPollEvents();
 	glfwSwapBuffers(window);
