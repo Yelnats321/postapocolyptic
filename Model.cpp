@@ -15,7 +15,9 @@ void Model::updateMatrix(){
 	modelMatrix *= glm::toMat4(rotation*BASEROTATION);
 	modelMatrix = glm::scale(modelMatrix, scale);
 }
-
+void Model::setScale(float sc){
+	setScale(sc, sc, sc);
+}
 void Model::setScale(float x, float y, float z){
 	scale = glm::vec3(x,y,z);
 	updateMatrix();

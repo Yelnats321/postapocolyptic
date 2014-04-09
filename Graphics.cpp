@@ -85,6 +85,7 @@ baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/18
 	//projectile test shit
 	GLfloat vert [] = {0,0.2,0,
 		1,0.2,1};
+	projHit = glm::vec3(1,0,0);
 	glGenVertexArrays(1, &projVao);
 	glBindVertexArray(projVao);
 	glGenBuffers(1, &projVbo);
@@ -117,22 +118,86 @@ glm::vec2 Graphics::getMouseTile(Map & map, float height = 0.f){
 	glfwGetCursorPos(window, &mouseX, &mouseY);
 	glm::vec3 win = glm::vec3( mouseX, WINDOW_HEIGHT - mouseY, -Z_DEPTH);
 	glm::vec4 viewport(0,0,WINDOW_WIDTH,WINDOW_HEIGHT);
-	glm::vec3 unprojectedNearZ = glm::unProject(win,
+	glm::vec3 line0 = glm::unProject(win,
 		baseView,
 		baseProjection,
 		viewport);
 	win[2] = Z_DEPTH;
-	glm::vec3 unprojectedFarZ = glm::unProject(win,
+	glm::vec3 line1 = glm::unProject(win,
 		baseView,
 		baseProjection,
 		viewport);
 
 
-	glm::vec3 dir( unprojectedFarZ-unprojectedNearZ );
-
-	float t = unprojectedNearZ.y/(-dir.y);
-	glm::vec3 linePlaneIntersect = unprojectedNearZ + (dir*t); 
+	//from the wikipedia page kinda
+	glm::vec3 lineDir(line1 - line0);
+	//originally its (point0-line0) dot normal / lineDir dot normal
+	//since the point0 is just 0,0,0 and the normal is only up, we only use the y
+	float dist = (height-line0.y)/lineDir.y;
+	//trace the dist along the line
+	glm::vec3 linePlaneIntersect = line0 + (lineDir*dist); 
+	//point = near + dir*near.y
 	return glm::vec2(linePlaneIntersect.x, linePlaneIntersect.z);
+}
+
+bool rayTriangleIntersect(const glm::vec3 & rayStart, const glm::vec3 & rayEnd,const std::array<glm::vec3, 3> & vertices){
+	glm::vec3 e1,e2,h,s,q, d(rayEnd-rayStart);
+	float a,f,u,v;
+	e1 = vertices[1]-vertices[0];
+	e2 = vertices[2]-vertices[0];
+	h = glm::cross(d, e2);
+	//crossProduct(h,d,e2);
+	a = glm::dot(e1,h);
+
+	if (a > -0.00001 && a < 0.00001)
+		return(false);
+
+	f = 1/a;
+	s = rayStart-vertices[0];
+//	vector(s,p,v0);
+	u = f * (glm::dot(s,h));
+
+	if (u < 0.0 || u > 1.0)
+		return(false);
+	q = glm::cross(s, e1);
+//	crossProduct(q,s,e1);
+	v = f * glm::dot(d,q);
+
+	if (v < 0.0 || u + v > 1.0)
+		return(false);
+
+	// at this stage we can compute t to find out where
+	// the intersection point is on the line
+	float t = f * glm::dot(e2,q);
+
+	if (t > 0.00001 && t<=1){ // ray intersection
+		//std::cout<<rayEnd.x << " " << rayEnd.z<<std::endl;
+		//if((rayStart + d*t) <= glm::vec3(rayEnd))
+		return(true);
+	}
+
+	else // this means that there is a line intersection
+		 // but not a ray intersection
+		 return (false);
+
+/*	for(int i = 0; i < 3; i++){
+		for(int j = 0; j <3; j++){
+			std::cout<< vertices[i*3+j] << " ";
+		}
+		std::cout<<std::endl;
+	}*/
+	//return false;
+}
+
+bool rayModelIntersect(const Model * model, const glm::vec3 & rayStart, const glm::vec3 & rayEnd){
+	const glm::mat4 invModel = glm::inverse(model->getModelMatrix());
+	const glm::vec3 invRS(invModel * glm::vec4(rayStart, 1)), invRE(invModel * glm::vec4(rayEnd, 1));
+	for(int i = 0; i< model->data->getNumTris(); i++){
+		if(rayTriangleIntersect(invRS, invRE, model->data->getTriangle(i))){
+			return true;
+		}
+	}
+	return false;
 }
 
 void Graphics::drawModel(const Model * model, const glm::mat4 & VP, bool useTex, GLuint prog, const glm::vec3 * colors = nullptr, int amount = 0){
@@ -140,7 +205,7 @@ void Graphics::drawModel(const Model * model, const glm::mat4 & VP, bool useTex,
 	glUniformMatrix4fv(glGetUniformLocation(prog, "M"), 1, GL_FALSE, glm::value_ptr(model->getModelMatrix()));
 	glUniformMatrix4fv(glGetUniformLocation(prog, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*model->getModelMatrix()));
 	for(int i = 0; i < model->data->getNumMeshes(); i++){
-		const IQM::iqmmesh &m = model->data->getMeshes()[i];
+		const IQM::iqmmesh &m = model->data->getMesh(i);
 		if(useTex){
 			glUniform3fv(glGetUniformLocation(prog, "color"), 1, glm::value_ptr(colors[std::min(i, amount-1)]));
 			glActiveTexture(GL_TEXTURE0);
@@ -176,13 +241,17 @@ void Graphics::update(double dt){
 		std::cout<<"-OGL ERROR! "<<fx<<std::endl;
 	static Map map("test.bin");
 	static Model building("building.iqm");
-	building.setPosition(glm::vec3(1,0,1));
-	//building.setRotation(0,M_PI,0);
+	building.setPosition(glm::vec3(3,0,2.5));
+	building.setRotation(0,M_PI,0);
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) ==GLFW_PRESS){
 		glm::vec2 diff = getMouseTile(map) - glm::vec2(player->getPosition().x+0.5, player->getPosition().z+0.5);
 		projOffset = glm::translate(glm::mat4(), player->getPosition() + glm::vec3(0.5, 0, 0.5));
 		projOffset = glm::scale(projOffset, glm::vec3(diff.x, 1, diff.y));
-		std::cout<<diff.x<< " " <<diff.y<<std::endl;
+		const glm::vec3 start( projOffset * glm::vec4(0,0.2,0,1)), end(projOffset*glm::vec4(1,0.2,1,1));
+		std::cout<<start.x << " " <<start.y<< " " <<start.z<< std::endl<< end.x << " " <<end.y<< " " <<end.z<< std::endl <<std::endl;
+		projHit = glm::vec3(1,0,0);
+		if(rayModelIntersect(&building, start, end))
+			projHit = glm::vec3(0,1,0);
 	}
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)==GLFW_PRESS){
 		glm::vec2 pos = getMouseTile(map);
@@ -205,17 +274,17 @@ void Graphics::update(double dt){
 		player->setPosition(pos.x+1*dt, pos.y, pos.z);
 	}
 	//Shadow shit
+	//glCullFace(GL_FRONT);
 	glViewport(0,0,SHADOW_CUBE_SIZE,SHADOW_CUBE_SIZE);
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFrameBuffer);
 	glUseProgram(shadowProgram);
-	glEnable(GL_DEPTH_TEST);
 	const glm::vec3 lightPos = player->getPosition() + glm::vec3(0.5,0.3, 0.5);
 	for(int i = 0; i < 6; i++){
 		//	i = i*2;
 		//for now, I think I will n eed all sides later
 		//if(i == 2)
 		//	i=4;
-		glm::mat4 wuew = glm::perspective<float>(90,1,0.01, 5)*glm::translate(shadowMapViews[i], -lightPos);
+		glm::mat4 wuew = glm::perspective<float>(90,1,0.1, 5)*glm::translate(shadowMapViews[i], -lightPos);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, shadowCubemap,0);
 		glClear( GL_DEPTH_BUFFER_BIT);
 		//unneeded ATM cuz map doesnt obscure anything(nohting below it)
@@ -225,6 +294,7 @@ void Graphics::update(double dt){
 
 	//Normal draw shit
 	//glDisable(GL_DEPTH_TEST);
+	//glCullFace(GL_BACK);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glUseProgram(baseProgram);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -233,6 +303,7 @@ void Graphics::update(double dt){
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowCubemap);
 	glUniform3fv(glGetUniformLocation(baseProgram, "lightPos"), 1, glm::value_ptr(lightPos));
+	glUniform1f(glGetUniformLocation(baseProgram, "alpha"), 0);
 	const glm::mat4 VP = baseProjection * baseView;
 	drawMap(&map, VP, true, baseProgram);
 
@@ -246,8 +317,14 @@ void Graphics::update(double dt){
 	drawModel(&building, VP, true, baseProgram, colors, 5);
 
 	//projectiel test shit
+	/*glBindVertexArray(building.data->getVao());
+	glUniform3fv(glGetUniformLocation(baseProgram, "color"), 1, glm::value_ptr(glm::vec3(0,0,1)));
+	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "M"), 1, GL_FALSE, glm::value_ptr(building.getModelMatrix()));
+	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*building.getModelMatrix()));
+	glDrawArrays(GL_POINTS,0, building.data->getNumVerts());*/
+
 	glBindVertexArray(projVao);
-	glUniform3fv(glGetUniformLocation(baseProgram, "color"), 1, glm::value_ptr(glm::vec3(1,0,0)));
+	glUniform3fv(glGetUniformLocation(baseProgram, "color"), 1, glm::value_ptr(projHit));
 	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "M"), 1, GL_FALSE, glm::value_ptr(projOffset));
 	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*projOffset));
 	glDrawArrays(GL_LINES, 0, 6);

@@ -105,6 +105,7 @@ const IQMFile * IQMFile::openFile(const std::string & name){
 }
 
 IQMFile::IQMFile(std::string filename){
+	assert(sizeof(IQM::iqmmesh) == sizeof(uint32_t)*6);
 	std::cout<<sizeof(IQM::iqmheader)<<std::endl;
 	std::ifstream f;
 	f.open( filename, std::ios::binary|std::ios::in);
@@ -143,9 +144,24 @@ IQMFile::~IQMFile(){
 
 
 int IQMFile::getNumMeshes() const{return nummeshes;}
+int IQMFile::getNumTris() const{return numtris;}
+int IQMFile::getNumVerts() const{return numverts;}
 GLuint IQMFile::getVao() const{return vao;}
+GLuint IQMFile::getVbo() const{return vbo;}
 GLuint IQMFile::getTexture(int pos) const{return textures[pos];}
-const IQM::iqmmesh * IQMFile::getMeshes() const{return meshes;}
+const IQM::iqmmesh & IQMFile::getMesh(int pos) const{return meshes[pos];}
+
+
+std::array<glm::vec3, 3> IQMFile::getTriangle(int tri) const{
+	std::array<glm::vec3, 3> triangle;/* = {inposition[tris[tri].vertex[0]], inposition[tris[tri].vertex[0]+1], inposition[tris[tri].vertex[0]+2], 
+		inposition[tris[tri].vertex[1]], inposition[tris[tri].vertex[1]+1], inposition[tris[tri].vertex[1]+2], 
+		inposition[tris[tri].vertex[2]], inposition[tris[tri].vertex[2]+1], inposition[tris[tri].vertex[2]+2]};*/
+	//std::cout<< tris[tri].vertex[0] << " " <<tris[tri].vertex[1] <<" " << tris[tri].vertex[2] << std::endl;
+	memcpy(&triangle[0], &inposition[tris[tri].vertex[0]*3], sizeof(float)*3);
+	memcpy(&triangle[1], &inposition[tris[tri].vertex[1]*3], sizeof(float)*3);
+	memcpy(&triangle[2], &inposition[tris[tri].vertex[2]*3], sizeof(float)*3);
+	return triangle;
+}
 
 // Note that this animates all attributes (position, normal, tangent, bitangent)
 // for expository purposes, even though this demo does not use all of them for rendering.
@@ -179,7 +195,8 @@ void IQMFile::loadmeshes(std::string & filename, const iqmheader &hdr){
 	outframe.resize(hdr.num_joints);
 	textures.resize(hdr.num_meshes,0);
 
-	const float  *inposition = NULL, *innormal = NULL, *intangent = NULL, *intexcoord = NULL;
+	inposition = NULL; 
+	const float *innormal = NULL, *intangent = NULL, *intexcoord = NULL;
 	const unsigned char *inblendindex = NULL, *inblendweight = NULL;
 	const char *str = hdr.ofs_text ? (char *)&meshdata[hdr.ofs_text] : "";
 	const iqmvertexarray *vas = (iqmvertexarray *)&meshdata[hdr.ofs_vertexarrays];
@@ -253,7 +270,7 @@ void IQMFile::loadmeshes(std::string & filename, const iqmheader &hdr){
 		}
 	}
 
-	const iqmtriangle *tris = (iqmtriangle *)&meshdata[hdr.ofs_triangles];
+	tris = (iqmtriangle *)&meshdata[hdr.ofs_triangles];
 
 	vertex *verts = new vertex[hdr.num_vertexes];
 	memset(verts, 0, hdr.num_vertexes*sizeof(vertex));

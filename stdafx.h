@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstdint>
 #include <map>
+#include <array>
 //Opengl
 #include <GL/glew.h>
 #define GLFW_DLL

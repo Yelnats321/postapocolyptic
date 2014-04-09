@@ -11,6 +11,7 @@ class Model{
 public:
 	Model(const std::string &);
 	const IQMFile * const data;
+	void setScale(float);
 	void setScale(float, float, float);
 	void setPosition(float, float, float);
 	void setPosition(const glm::vec3 &);

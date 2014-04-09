@@ -14,6 +14,7 @@ struct iqmmesh
 struct iqmjoint;
 struct Matrix3x4;
 struct iqmheader;
+struct iqmtriangle;
 }
 
 class IQMFile{
@@ -27,6 +28,9 @@ class IQMFile{
 	/*IQM::iqmpose *poses;
 	IQM::iqmanim *anims;
 	IQM::Matrix3x4 *frames;*/
+	//some offset shit
+	float * inposition;
+	IQM::iqmtriangle * tris;
 	std::vector<GLuint> textures;
 	std::vector<IQM::Matrix3x4> outframe, baseframe, inversebaseframe;
 	GLuint ebo, vbo, vao;
@@ -36,8 +40,13 @@ public:
 	~IQMFile();
 	//void animate(float);
 	int getNumMeshes() const;
+	int getNumTris() const;
+	std::array<glm::vec3,  3> getTriangle(int) const;
 	GLuint getVao() const;
-	const IQM::iqmmesh * getMeshes() const;
+	const IQM::iqmmesh & getMesh(int) const;
 	GLuint getTexture(int) const;
 	static const IQMFile * openFile(const std::string&);
+	//remove this later
+	GLuint getVbo() const;
+	int getNumVerts() const;
 };

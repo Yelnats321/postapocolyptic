@@ -10,6 +10,7 @@ class Graphics{
 	const glm::mat4 baseView, baseProjection;
 	GLuint shadowFrameBuffer, shadowCubemap, shadowProgram;
 	GLuint projVao, projVbo;
+	glm::vec3 projHit;
 	glm::mat4 projOffset;
 	glm::mat4 shadowMapViews[6];
 	Player * player;
