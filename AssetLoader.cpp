@@ -15,6 +15,18 @@ std::map<std::string, GLuint> textures;
 //
 //map<string, unique_ptr<ObjFile> > files;
 
+std::string getShaderError(GLuint shader){
+	GLint maxLength = 0;
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
+
+	//The maxLength includes the NULL character
+	//char * errorLog = new char[maxLength];
+	std::vector<char> errorLog(maxLength);
+	std::cout<<maxLength<<std::endl;
+	glGetShaderInfoLog(shader, maxLength, &maxLength, &errorLog[0]);
+	return std::string(errorLog.begin(), errorLog.end());
+}
+
 GLuint genShaders(std::string vert, std::string frag){
 	std::ifstream file;
 
@@ -43,21 +55,33 @@ GLuint genShaders(std::string vert, std::string frag){
 	glShaderSource( vertShader, 1, &c_str1, NULL );
 	glCompileShader( vertShader );
 
+	GLint statusV;
+	glGetShaderiv( vertShader, GL_COMPILE_STATUS, &statusV ); 
+	if(statusV == 0)
+		std::cout<<getShaderError(vertShader);
 	// Create and compile the fragment shader
 	GLuint fragShader = glCreateShader( GL_FRAGMENT_SHADER );
 	const char *c_str2 = fragmentSource.c_str();
 	glShaderSource( fragShader, 1, &c_str2, NULL );
 	glCompileShader( fragShader );
 
-	GLint statusF, statusV;
+	GLint statusF;
 	glGetShaderiv( fragShader, GL_COMPILE_STATUS, &statusF ); 
-	glGetShaderiv( vertShader, GL_COMPILE_STATUS, &statusV ); 
+	if(statusF == 0)
+		std::cout<<getShaderError(vertShader);
+
 
 	if(statusV == 0 || statusF==0){
 		std::cout<<"Shader status: " <<statusV<< " " << statusF << std::endl;
+		std::string error;
+		if(statusV)
+			error= getShaderError(vertShader);
+		if(statusF)
+			error = error + getShaderError(fragShader);
 		glDeleteShader(vertShader);
 		glDeleteShader(fragShader);
-		throw "Shader compile failed";
+		std::cout<<error<<std::endl;
+		throw error.c_str();
 	}
 
 	// Link the vertex and fragment shader into a shader program

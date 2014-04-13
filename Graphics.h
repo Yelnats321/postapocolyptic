@@ -4,9 +4,9 @@ class Player;
 class Model;
 //If the const matrixes break, it's cuz you defined the consts it relies on AFTER it, becasue of some magic shit in C++
 class Graphics{
-	const float Z_DEPTH, X_Y_DEPTH , WINDOW_WIDTH , WINDOW_HEIGHT, SHADOW_CUBE_SIZE;
+	const float Z_DEPTH, X_Y_DEPTH , WINDOW_WIDTH , WINDOW_HEIGHT, SHADOW_CUBE_SIZE, SHADOW_NEAR, SHADOW_FAR;
 	GLFWwindow * window;
-	GLuint baseProgram;
+	GLuint firstPassProgram, secondPassProgram;
 	const glm::mat4 baseView, baseProjection;
 	GLuint shadowFrameBuffer, shadowCubemap, shadowProgram;
 	GLuint projVao, projVbo;

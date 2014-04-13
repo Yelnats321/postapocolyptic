@@ -106,7 +106,6 @@ const IQMFile * IQMFile::openFile(const std::string & name){
 
 IQMFile::IQMFile(std::string filename){
 	assert(sizeof(IQM::iqmmesh) == sizeof(uint32_t)*6);
-	std::cout<<sizeof(IQM::iqmheader)<<std::endl;
 	std::ifstream f;
 	f.open( filename, std::ios::binary|std::ios::in);
 	if(!f) throw;
@@ -209,37 +208,31 @@ void IQMFile::loadmeshes(std::string & filename, const iqmheader &hdr){
 			if(va.format != IQM_FLOAT || va.size != 3)
 				throw "File format is shit";
 			inposition = (float *)&meshdata[va.offset]; 
-			std::cout<<"pos"<<std::endl;
 			break;
 		case IQM_NORMAL: 
 			if(va.format != IQM_FLOAT || va.size != 3)
 				throw "File format is shit";
 			innormal = (float *)&meshdata[va.offset];
-			std::cout<<"norm"<<std::endl;
 			break;
 		case IQM_TANGENT:
 			if(va.format != IQM_FLOAT || va.size != 4) 
 				throw "File format is shit";
 			intangent = (float *)&meshdata[va.offset];
-			std::cout<<"tan"<<std::endl;
 			break;
 		case IQM_TEXCOORD: 
 			if(va.format != IQM_FLOAT || va.size != 2)
 				throw "File format is shit";
 			intexcoord = (float *)&meshdata[va.offset];
-			std::cout<<"tex"<<std::endl;
 			break;
 		case IQM_BLENDINDEXES:
 			if(va.format != IQM_UBYTE || va.size != 4)
 				throw "File format is shit";
 			inblendindex = (unsigned char *)&meshdata[va.offset]; 
-			std::cout<<"blendindex"<<std::endl;
 			break;
 		case IQM_BLENDWEIGHTS:
 			if(va.format != IQM_UBYTE || va.size != 4) 
 				throw "File format is shit";
 			inblendweight = (unsigned char *)&meshdata[va.offset];
-			std::cout<<"blendweights"<<std::endl;
 			break;
 		}
 	}

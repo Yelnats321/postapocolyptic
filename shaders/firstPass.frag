@@ -6,7 +6,6 @@ uniform sampler2D tex;
 uniform samplerCubeShadow cubemap;
 uniform vec3 color;
 uniform vec3 lightPos;
-uniform float alpha;
 uniform float SHADOW_NEAR;
 uniform float SHADOW_FAR;
 
@@ -24,10 +23,9 @@ float VectorToDepthValue(vec3 Vec){
 }
 
 void main(){
-	outColor = vec4(color,1);
+	outColor = vec4(color,0.3);
 	float VtoD = VectorToDepthValue(lightPos-position);
 	if(texture(cubemap, vec4( position - lightPos ,VtoD-0.001))!= 1){
-		outColor.a = alpha;
-		if(alpha ==0) discard;
+		discard;
 	}
 }

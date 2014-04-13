@@ -10,7 +10,7 @@ Z_DEPTH(20), X_Y_DEPTH(5),
 //for the actual window
 WINDOW_WIDTH(1024), WINDOW_HEIGHT(768),
 //for the shadow cubemap
-SHADOW_CUBE_SIZE(800),
+SHADOW_CUBE_SIZE(800), SHADOW_NEAR(0.1), SHADOW_FAR(10),
 //matrix = glm::ortho<float>(-aspect, aspect, -1, 1, 0, 100) *glm::lookAt(glm::vec3(0,1,0.001), glm::vec3(0,0,0), glm::vec3(0,1,0));
 //36,34,90 is good so keep it ok?
 baseProjection(glm::ortho<float>(-WINDOW_WIDTH/WINDOW_HEIGHT*X_Y_DEPTH, WINDOW_WIDTH/WINDOW_HEIGHT*X_Y_DEPTH, -X_Y_DEPTH, X_Y_DEPTH, -Z_DEPTH, Z_DEPTH)),
@@ -21,6 +21,7 @@ baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/18
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); //We don't want the old OpenGL
+	glfwWindowHint(GLFW_ALPHA_BITS, 8);
 
 	// Open a window and create its OpenGL context
 	window = glfwCreateWindow( WINDOW_WIDTH, WINDOW_HEIGHT, "Fallout Kinda", NULL, NULL );
@@ -35,20 +36,28 @@ baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/18
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CW);
+	glColorMask(true, true, true, true);
 	glClearColor(0.95f,0.95f,0.95f, 1);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_BLEND);
 
 	try{
-		baseProgram = genShaders("shaders/vert.vert", "shaders/frag.frag");
+		firstPassProgram = genShaders("shaders/vert.vert", "shaders/firstPass.frag");
 	}catch(const char * e){
 		std::cout<<"Normal shader compile failed: " << e<<std::endl;
 	}
-	glUseProgram(baseProgram);
-	glUniform1i(glGetUniformLocation(baseProgram, "tex"), 0);
-	glUniform1i(glGetUniformLocation(baseProgram, "cubemap"), 1);
+	glUseProgram(firstPassProgram);
+	glUniform1i(glGetUniformLocation(firstPassProgram, "tex"), 0);
+	glUniform1i(glGetUniformLocation(firstPassProgram, "cubemap"), 1);
+	glUniform1f(glGetUniformLocation(firstPassProgram, "SHADOW_NEAR"), SHADOW_NEAR);
+	glUniform1f(glGetUniformLocation(firstPassProgram, "SHADOW_FAR"), SHADOW_FAR);
 
-
+	try{
+		secondPassProgram = genShaders("shaders/vert.vert", "shaders/secondPass.frag");
+	}catch(const char * e){
+		std::cout<<e<<std::endl;
+	}
 	try{
 		shadowProgram = genShaders("shaders/passShadow.vert", "shaders/passShadow.frag");
 	}catch(const char * e){
@@ -100,7 +109,7 @@ Graphics::~Graphics(){
 	glDeleteFramebuffers(1, &shadowFrameBuffer);
 	glDeleteProgram(shadowProgram);
 
-	glDeleteProgram(baseProgram);
+	glDeleteProgram(firstPassProgram);
 
 	glDeleteVertexArrays(1, &projVao);
 	glDeleteBuffers(1, &projVbo);
@@ -275,6 +284,7 @@ void Graphics::update(double dt){
 	}
 	//Shadow shit
 	//glCullFace(GL_FRONT);
+	glClearDepth(1);
 	glViewport(0,0,SHADOW_CUBE_SIZE,SHADOW_CUBE_SIZE);
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFrameBuffer);
 	glUseProgram(shadowProgram);
@@ -284,7 +294,7 @@ void Graphics::update(double dt){
 		//for now, I think I will n eed all sides later
 		//if(i == 2)
 		//	i=4;
-		glm::mat4 wuew = glm::perspective<float>(90,1,0.1, 5)*glm::translate(shadowMapViews[i], -lightPos);
+		glm::mat4 wuew = glm::perspective<float>(90,1,SHADOW_NEAR, SHADOW_FAR)*glm::translate(shadowMapViews[i], -lightPos);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, shadowCubemap,0);
 		glClear( GL_DEPTH_BUFFER_BIT);
 		//unneeded ATM cuz map doesnt obscure anything(nohting below it)
@@ -293,40 +303,44 @@ void Graphics::update(double dt){
 	}
 
 	//Normal draw shit
-	//glDisable(GL_DEPTH_TEST);
 	//glCullFace(GL_BACK);
+	glBlendFunc(GL_ONE, GL_ZERO);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glUseProgram(baseProgram);
+	glUseProgram(firstPassProgram);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	glViewport(0,0,WINDOW_WIDTH, WINDOW_HEIGHT);
 	//figure out (later) if I need this here or it can just be done once in init
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowCubemap);
-	glUniform3fv(glGetUniformLocation(baseProgram, "lightPos"), 1, glm::value_ptr(lightPos));
-	glUniform1f(glGetUniformLocation(baseProgram, "alpha"), 0);
+	glUniform3fv(glGetUniformLocation(firstPassProgram, "lightPos"), 1, glm::value_ptr(lightPos));
 	const glm::mat4 VP = baseProjection * baseView;
-	drawMap(&map, VP, true, baseProgram);
+	drawMap(&map, VP, true, firstPassProgram);
 
-	drawModel(player,VP, true, baseProgram, &glm::vec3(1), 1);
+	drawModel(player,VP, true, firstPassProgram, &glm::vec3(1), 1);
 	glm::vec3 colors[5] = {
 		glm::vec3(0.5),
 		glm::vec3(0,0.8,0.7),
 		glm::vec3(0.5),
 		glm::vec3(0.5),
 		glm::vec3(0.5)};
-	drawModel(&building, VP, true, baseProgram, colors, 5);
+	drawModel(&building, VP, true, firstPassProgram, colors, 5);
 
-	//projectiel test shit
-	/*glBindVertexArray(building.data->getVao());
-	glUniform3fv(glGetUniformLocation(baseProgram, "color"), 1, glm::value_ptr(glm::vec3(0,0,1)));
-	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "M"), 1, GL_FALSE, glm::value_ptr(building.getModelMatrix()));
-	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*building.getModelMatrix()));
-	glDrawArrays(GL_POINTS,0, building.data->getNumVerts());*/
+	
+	glBlendFunc(GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA);
+	glUseProgram(secondPassProgram);
+	drawMap(&map, VP, true, secondPassProgram);
 
+	drawModel(player,VP, true, secondPassProgram, &glm::vec3(1), 1);
+
+	drawModel(&building, VP, true, secondPassProgram, colors, 5);
+
+
+
+	glUseProgram(firstPassProgram);
 	glBindVertexArray(projVao);
-	glUniform3fv(glGetUniformLocation(baseProgram, "color"), 1, glm::value_ptr(projHit));
-	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "M"), 1, GL_FALSE, glm::value_ptr(projOffset));
-	glUniformMatrix4fv(glGetUniformLocation(baseProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*projOffset));
+	glUniform3fv(glGetUniformLocation(firstPassProgram, "color"), 1, glm::value_ptr(projHit));
+	glUniformMatrix4fv(glGetUniformLocation(firstPassProgram, "M"), 1, GL_FALSE, glm::value_ptr(projOffset));
+	glUniformMatrix4fv(glGetUniformLocation(firstPassProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*projOffset));
 	glDrawArrays(GL_LINES, 0, 6);
 	glfwPollEvents();
 	glfwSwapBuffers(window);
