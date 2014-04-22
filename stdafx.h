@@ -1,4 +1,3 @@
-#pragma once
 //System
 #define _USE_MATH_DEFINES
 #include <cmath>

@@ -1,7 +1,7 @@
 #include "stdafx.h"
+#include "cModel.h"
 #include "Graphics.h"
 #include "AssetLoader.h"
-#include "Player.h"
 #include "IQMFile.h"
 
 Graphics::Graphics():
@@ -76,11 +76,12 @@ baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/18
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+	//enable if cubemap is a shadow, disable if not
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
 
 	for(int i = 0; i <6; i++){
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, GL_DEPTH_COMPONENT, SHADOW_CUBE_SIZE, SHADOW_CUBE_SIZE,0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, GL_DEPTH_COMPONENT, SHADOW_CUBE_SIZE, SHADOW_CUBE_SIZE,0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	}
 
 	shadowMapViews[1] = glm::lookAt(glm::vec3(0), glm::vec3(-1,0,0),glm::vec3(0,-1,0));
@@ -198,7 +199,7 @@ bool rayTriangleIntersect(const glm::vec3 & rayStart, const glm::vec3 & rayEnd,c
 	//return false;
 }
 
-bool rayModelIntersect(const Model * model, const glm::vec3 & rayStart, const glm::vec3 & rayEnd){
+bool rayModelIntersect(const cModel * model, const glm::vec3 & rayStart, const glm::vec3 & rayEnd){
 	const glm::mat4 invModel = glm::inverse(model->getModelMatrix());
 	const glm::vec3 invRS(invModel * glm::vec4(rayStart, 1)), invRE(invModel * glm::vec4(rayEnd, 1));
 	for(int i = 0; i< model->data->getNumTris(); i++){
@@ -209,7 +210,7 @@ bool rayModelIntersect(const Model * model, const glm::vec3 & rayStart, const gl
 	return false;
 }
 
-void Graphics::drawModel(const Model * model, const glm::mat4 & VP, bool useTex, GLuint prog, const glm::vec3 * colors = nullptr, int amount = 0){
+void Graphics::drawModel(const cModel * model, const glm::mat4 & VP, bool useTex, GLuint prog, const glm::vec3 * colors = nullptr, int amount = 0){
 	glBindVertexArray(model->data->getVao());
 	glUniformMatrix4fv(glGetUniformLocation(prog, "M"), 1, GL_FALSE, glm::value_ptr(model->getModelMatrix()));
 	glUniformMatrix4fv(glGetUniformLocation(prog, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*model->getModelMatrix()));
@@ -249,7 +250,7 @@ void Graphics::update(double dt){
 	while((fx = glGetError())!=GL_NO_ERROR)
 		std::cout<<"-OGL ERROR! "<<fx<<std::endl;
 	static Map map("test.bin");
-	static Model building("building.iqm");
+	static cModel building("building.iqm");
 	building.setPosition(glm::vec3(3,0,2.5));
 	building.setRotation(0,M_PI,0);
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) ==GLFW_PRESS){
@@ -347,4 +348,4 @@ void Graphics::update(double dt){
 }
 
 bool Graphics::isOpen(){return !glfwWindowShouldClose(window);}
-void Graphics::setPlayer(Player * p){player = p;}
+void Graphics::setPlayer(cModel * p){player = p;}

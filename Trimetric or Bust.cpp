@@ -1,10 +1,10 @@
 #include "stdafx.h"
 #include "Graphics.h"
-#include "Player.h"
+#include "cModel.h"
 
 int main(){
 	Graphics graphics;
-	Player player;
+	cModel player("stalker.iqm");
 	graphics.setPlayer(&player);
 	double time = glfwGetTime();
 	while(graphics.isOpen()){

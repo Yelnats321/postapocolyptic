@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Component System">
+      <UniqueIdentifier>{f4f6dda1-c15f-4887-9763-522066a81a68}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -33,11 +36,14 @@
     <ClInclude Include="IQMGeometry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Model.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="cModel.h">
+      <Filter>Component System</Filter>
     </ClInclude>
-    <ClInclude Include="Player.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="cBase.h">
+      <Filter>Component System</Filter>
+    </ClInclude>
+    <ClInclude Include="Entity.h">
+      <Filter>Component System</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -59,11 +65,14 @@
     <ClCompile Include="IQMFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Model.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="cModel.cpp">
+      <Filter>Component System</Filter>
     </ClCompile>
-    <ClCompile Include="Player.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="cBase.cpp">
+      <Filter>Component System</Filter>
+    </ClCompile>
+    <ClCompile Include="Entity.cpp">
+      <Filter>Component System</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
