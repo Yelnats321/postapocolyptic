@@ -3,6 +3,7 @@
 #include "Graphics.h"
 #include "AssetLoader.h"
 #include "IQMFile.h"
+#include <random>
 
 Graphics::Graphics():
 //For the projection 
@@ -93,8 +94,8 @@ baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/18
 	shadowMapViews[4] = glm::lookAt(glm::vec3(0), glm::vec3(0,0,1),glm::vec3(0,-1,0));
 
 	//projectile test shit
-	GLfloat vert [] = {0,0.2,0,
-		1,0.2,1};
+	GLfloat vert [] = {0,0,0,
+		1,1,1};
 	projHit = glm::vec3(1,0,0);
 	glGenVertexArrays(1, &projVao);
 	glBindVertexArray(projVao);
@@ -210,6 +211,25 @@ bool rayModelIntersect(const cModel * model, const glm::vec3 & rayStart, const g
 	return false;
 }
 
+glm::vec3 randomVector(const glm::vec3 & refVec, float angle){
+	std::random_device randomDevice;
+	std::mt19937 randomEngine(randomDevice());
+	std::uniform_real_distribution <> angDist(0, M_PI*2);
+	std::uniform_real_distribution <> distDist(0, 1);
+	float rad = sqrt(distDist(randomEngine));
+	float ang = angDist(randomEngine);
+	float x = rad * cos(ang);
+	float y = rad * sin(ang);
+	float r = tan((angle/2)*M_PI/180);
+	std::cout<<x<<" " <<y<< " " << x*x+y*y<<std::endl;
+	glm::vec3 randomVec(x*r,y*r,1);
+	randomVec = glm::normalize(randomVec);
+	glm::vec3 normRef = glm::normalize(refVec);
+
+	//glm::rotate(normRef, randomVec);
+	return glm::rotate(	glm::rotation(glm::vec3(0,0,1),normRef), randomVec)*glm::length(refVec);
+}
+
 void Graphics::drawModel(const cModel * model, const glm::mat4 & VP, bool useTex, GLuint prog, const glm::vec3 * colors = nullptr, int amount = 0){
 	glBindVertexArray(model->data->getVao());
 	glUniformMatrix4fv(glGetUniformLocation(prog, "M"), 1, GL_FALSE, glm::value_ptr(model->getModelMatrix()));
@@ -250,15 +270,17 @@ void Graphics::update(double dt){
 	while((fx = glGetError())!=GL_NO_ERROR)
 		std::cout<<"-OGL ERROR! "<<fx<<std::endl;
 	static Map map("test.bin");
-	static cModel building("building.iqm");
+	static cModel building("cube.iqm");
 	building.setPosition(glm::vec3(3,0,2.5));
 	building.setRotation(0,M_PI,0);
+	//change this to be more broad, work using start and end rather than whatever it is now
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) ==GLFW_PRESS){
-		glm::vec2 diff = getMouseTile(map) - glm::vec2(player->getPosition().x+0.5, player->getPosition().z+0.5);
-		projOffset = glm::translate(glm::mat4(), player->getPosition() + glm::vec3(0.5, 0, 0.5));
-		projOffset = glm::scale(projOffset, glm::vec3(diff.x, 1, diff.y));
-		const glm::vec3 start( projOffset * glm::vec4(0,0.2,0,1)), end(projOffset*glm::vec4(1,0.2,1,1));
-		std::cout<<start.x << " " <<start.y<< " " <<start.z<< std::endl<< end.x << " " <<end.y<< " " <<end.z<< std::endl <<std::endl;
+		const glm::vec2 mousePos = getMouseTile(map);
+		glm::vec3 diff = glm::vec3(mousePos.x, 0.2, mousePos.y) - glm::vec3(player->getPosition().x+0.5,0.2, player->getPosition().z+0.5);
+		diff = randomVector(diff, 10);
+		projOffset = glm::translate(glm::mat4(), player->getPosition() + glm::vec3(0.5, 0.2, 0.5));
+		projOffset = glm::scale(projOffset, diff);
+		const glm::vec3 start( projOffset * glm::vec4(0,0,0,1)), end(projOffset*glm::vec4(1,1,1,1));
 		projHit = glm::vec3(1,0,0);
 		if(rayModelIntersect(&building, start, end))
 			projHit = glm::vec3(0,1,0);

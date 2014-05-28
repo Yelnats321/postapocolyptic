@@ -134,7 +134,6 @@ IQMFile::IQMFile(std::string filename){
 }
 
 IQMFile::~IQMFile(){
-	glDeleteTextures(nummeshes, &textures[0]);
 	delete[] meshdata;
 	glDeleteBuffers(1, &ebo);
 	glDeleteBuffers(1, &vao);
@@ -257,7 +256,7 @@ void IQMFile::loadmeshes(std::string & filename, const iqmheader &hdr){
 	{
 		const iqmmesh &m = meshes[i];
 		try{
-			textures[i] = loadTexture(&str[m.material], false);
+			textures[i] = TextureManager::loadTexture(&str[m.material], false);
 		}catch(const char * e){
 			std::cout<< "Error loading texture \""<<&str[m.material]<<"\" in file \""<<filename<< "\" due to " <<e<<std::endl;
 		}

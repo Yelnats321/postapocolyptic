@@ -45,7 +45,7 @@ Map::Map(std::string name){
 	std::string imgName;
 	imgName.resize(size);
 	file.read((char*)&imgName[0], size);
-	texture = loadTexture(imgName, false);
+	texture = TextureManager::loadTexture(imgName, false);
 	file.read((char *)&width, 2);
 	file.read((char *)&height, 2);
 	mapData.resize(width*height);

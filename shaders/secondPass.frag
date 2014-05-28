@@ -9,5 +9,6 @@ in vec2 UV;
 in vec3 position;
 
 void main(){
-	outColor = vec4(color*0.3,1);
+	outColor = vec4(texture(tex, UV).rgb,1);
+	//outColor = vec4(color*0.3,1);
 }

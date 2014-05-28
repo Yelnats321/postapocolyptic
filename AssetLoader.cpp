@@ -11,7 +11,6 @@ extern "C"{
 //#include "Mesh.h"
 //#include "ObjFile.h"
 //
-std::map<std::string, GLuint> textures;
 //
 //map<string, unique_ptr<ObjFile> > files;
 
@@ -97,14 +96,10 @@ GLuint genShaders(std::string vert, std::string frag){
 	return shaderProg;
 }
 
-GLuint loadTexture(std::string name, bool sRGB){
-	if(textures.find(name) != textures.end()){
-		std::cout<<"Returned loaded texture \"" +name + "\" at location "<<textures[name]<<std::endl;
-		return textures[name];
-	}
-	GLuint texture = 0;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
+TextureManager::Texture::Texture(std::string name, bool sRGB){
+	tex = 0;
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
 	int width, height, channels;
 	unsigned char* image = SOIL_load_image(name.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);	if(sRGB)
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
@@ -121,9 +116,25 @@ GLuint loadTexture(std::string name, bool sRGB){
 	if(image == nullptr){
 		throw SOIL_last_result();
 	}
-	std::cout << "Loaded texture \"" + name + "\" to the location " << texture<<std::endl;
-	textures[name] = texture;
-	return texture;
+	std::cout << "Loaded texture \"" + name + "\" to the location " << tex<<std::endl;
+}
+TextureManager::Texture::Texture(Texture && other){
+	tex = other.tex;
+	other.tex = 0;
+}
+TextureManager::Texture::~Texture(){
+	glDeleteTextures(1, &tex);
+}
+std::unordered_map<std::string, TextureManager::Texture> TextureManager::textures;
+const GLuint TextureManager::loadTexture(std::string name, bool sRGB){
+	if(textures.find(name) != textures.end()){
+		std::cout<<"Returned loaded texture \"" +name + "\" at location "<<textures.at(name).tex<<std::endl;
+	}
+	else{
+		Texture tex(name, sRGB);
+		textures.emplace(name, std::move(tex));
+	}
+	return textures.at(name).tex;
 }
 //
 //void locationAppend(string origin, string & file){
