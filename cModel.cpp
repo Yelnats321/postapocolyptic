@@ -35,3 +35,18 @@ void cModel::setRotation(float x, float y, float z){
 }
 const glm::mat4 & cModel::getModelMatrix() const{return modelMatrix;}
 const glm::vec3 & cModel::getPosition() const{return position;}
+
+const void cModel::draw(const glm::mat4 & VP, bool useTex, GLuint prog, const glm::vec3 * colors, int amount){
+	glBindVertexArray(data->getVao());
+	glUniformMatrix4fv(glGetUniformLocation(prog, "M"), 1, GL_FALSE, glm::value_ptr(getModelMatrix()));
+	glUniformMatrix4fv(glGetUniformLocation(prog, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*getModelMatrix()));
+	for (int i = 0; i < data->getNumMeshes(); i++){
+		const IQM::iqmmesh &m = data->getMesh(i);
+		if (useTex){
+			glUniform3fv(glGetUniformLocation(prog, "color"), 1, glm::value_ptr(colors[std::min(i, amount - 1)]));
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, data->getTexture(i));
+		}
+		glDrawElements(GL_TRIANGLES, m.num_triangles * 3, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int)* m.first_triangle * 3));
+	}
+}

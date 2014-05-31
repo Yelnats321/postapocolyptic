@@ -104,6 +104,10 @@ baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/18
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vert), vert, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
+
+	Entity ent;
+	ent.addComponent<cModel>("dicks");
+	std::cout << &ent << std::endl;
 }
 
 Graphics::~Graphics(){
@@ -212,8 +216,7 @@ bool rayModelIntersect(const cModel * model, const glm::vec3 & rayStart, const g
 }
 
 glm::vec3 randomVector(const glm::vec3 & refVec, float angle){
-	std::random_device randomDevice;
-	std::mt19937 randomEngine(randomDevice());
+	std::mt19937 randomEngine(std::chrono::system_clock::now().time_since_epoch().count());
 	std::uniform_real_distribution <> angDist(0, M_PI*2);
 	std::uniform_real_distribution <> distDist(0, 1);
 	float rad = sqrt(distDist(randomEngine));
@@ -221,28 +224,12 @@ glm::vec3 randomVector(const glm::vec3 & refVec, float angle){
 	float x = rad * cos(ang);
 	float y = rad * sin(ang);
 	float r = tan((angle/2)*M_PI/180);
-	std::cout<<x<<" " <<y<< " " << x*x+y*y<<std::endl;
 	glm::vec3 randomVec(x*r,y*r,1);
 	randomVec = glm::normalize(randomVec);
 	glm::vec3 normRef = glm::normalize(refVec);
 
 	//glm::rotate(normRef, randomVec);
 	return glm::rotate(	glm::rotation(glm::vec3(0,0,1),normRef), randomVec)*glm::length(refVec);
-}
-
-void Graphics::drawModel(const cModel * model, const glm::mat4 & VP, bool useTex, GLuint prog, const glm::vec3 * colors = nullptr, int amount = 0){
-	glBindVertexArray(model->data->getVao());
-	glUniformMatrix4fv(glGetUniformLocation(prog, "M"), 1, GL_FALSE, glm::value_ptr(model->getModelMatrix()));
-	glUniformMatrix4fv(glGetUniformLocation(prog, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*model->getModelMatrix()));
-	for(int i = 0; i < model->data->getNumMeshes(); i++){
-		const IQM::iqmmesh &m = model->data->getMesh(i);
-		if(useTex){
-			glUniform3fv(glGetUniformLocation(prog, "color"), 1, glm::value_ptr(colors[std::min(i, amount-1)]));
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, model->data->getTexture(i));
-		}
-		glDrawElements(GL_TRIANGLES, m.num_triangles*3, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * m.first_triangle*3));
-	}
 }
 
 void Graphics::drawMap(const Map * map,const glm::mat4 & VP, bool useTex, GLuint prog){
@@ -322,7 +309,7 @@ void Graphics::update(double dt){
 		glClear( GL_DEPTH_BUFFER_BIT);
 		//unneeded ATM cuz map doesnt obscure anything(nohting below it)
 		drawMap(&map, wuew, false, shadowProgram);
-		drawModel(&building, wuew, false, shadowProgram);
+		building.draw(wuew, false, shadowProgram);
 	}
 
 	//Normal draw shit
@@ -339,23 +326,23 @@ void Graphics::update(double dt){
 	const glm::mat4 VP = baseProjection * baseView;
 	drawMap(&map, VP, true, firstPassProgram);
 
-	drawModel(player,VP, true, firstPassProgram, &glm::vec3(1), 1);
+	player->draw(VP, true, firstPassProgram, &glm::vec3(1), 1);
 	glm::vec3 colors[5] = {
 		glm::vec3(0.5),
 		glm::vec3(0,0.8,0.7),
 		glm::vec3(0.5),
 		glm::vec3(0.5),
 		glm::vec3(0.5)};
-	drawModel(&building, VP, true, firstPassProgram, colors, 5);
+	building.draw(VP, true, firstPassProgram, colors, 5);
 
 	
 	glBlendFunc(GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA);
 	glUseProgram(secondPassProgram);
 	drawMap(&map, VP, true, secondPassProgram);
 
-	drawModel(player,VP, true, secondPassProgram, &glm::vec3(1), 1);
+	player->draw(VP, true, secondPassProgram, &glm::vec3(1), 1);
 
-	drawModel(&building, VP, true, secondPassProgram, colors, 5);
+	building.draw( VP, true, secondPassProgram, colors, 5);
 
 
 

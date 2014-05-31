@@ -19,7 +19,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -84,6 +84,7 @@
     <ClInclude Include="AssetLoader.h" />
     <ClInclude Include="cBase.h" />
     <ClInclude Include="Entity.h" />
+    <ClInclude Include="EntityManager.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="IQMFile.h" />
     <ClInclude Include="IQMGeometry.h" />
@@ -95,6 +96,7 @@
     <ClCompile Include="AssetLoader.cpp" />
     <ClCompile Include="cBase.cpp" />
     <ClCompile Include="Entity.cpp" />
+    <ClCompile Include="EntityManager.cpp" />
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="IQMFile.cpp" />
     <ClCompile Include="Map.cpp" />

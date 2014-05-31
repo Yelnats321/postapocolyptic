@@ -14,7 +14,6 @@ class Graphics{
 	glm::mat4 shadowMapViews[6];
 	cModel * player;
 	glm::vec2 getMouseTile(Map &, float);
-	void drawModel(const cModel *, const glm::mat4 & VP, bool useTex, GLuint prog, const glm::vec3 *, int amount);
 	void drawMap(const Map *,const glm::mat4 & VP, bool useTex, GLuint prog);
 public:
 	Graphics();

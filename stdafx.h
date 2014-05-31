@@ -8,6 +8,8 @@
 #include <map>
 #include <unordered_map>
 #include <array>
+#include <chrono>
+#include <memory>
 //Opengl
 #include <GL/glew.h>
 #define GLFW_DLL
