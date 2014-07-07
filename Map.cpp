@@ -41,13 +41,16 @@ Map::Map(std::string name){
 		throw;
 	}
 	uint8_t size = 0;
+	width = 0, height = 0;
 	file.read((char *)&size, 1);
 	std::string imgName;
 	imgName.resize(size);
 	file.read((char*)&imgName[0], size);
 	texture = TextureManager::loadTexture(imgName, false);
 	file.read((char *)&width, 2);
+	std::cout << width << std::endl;
 	file.read((char *)&height, 2);
+	std::cout << height << std::endl;
 	mapData.resize(width*height);
 	file.read((char *)&mapData[0], mapData.size() * sizeof(uint16_t));
 
@@ -58,8 +61,3 @@ Map::~Map(){
 	glDeleteBuffers(1, &ebo);
 	glDeleteVertexArrays(1, &vao);
 }
-
-unsigned int Map::getWidth() const{return width;}
-unsigned int Map::getHeight() const{return height;}
-GLuint Map::getTexture() const{return texture;}
-GLuint Map::getVao() const{return vao;}

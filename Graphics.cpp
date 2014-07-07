@@ -104,13 +104,18 @@ baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/18
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vert), vert, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
-
 	Entity ent;
-	ent.addComponent<cModel>("dicks");
-	std::cout << &ent << std::endl;
+	ent.addComponent<cModel>("cube.iqm");
+	auto building = ent.getComponent<cModel>();
+	building->setPosition(glm::vec3(3, 0, 2.5));
+	building->setRotation(0, M_PI, 0);
+	entities.emplace_back(std::move(ent));
+
+	map = new Map("test.bin");
 }
 
 Graphics::~Graphics(){
+	delete map;
 	glDeleteTextures(1, &shadowCubemap);
 	glDeleteFramebuffers(1, &shadowFrameBuffer);
 	glDeleteProgram(shadowProgram);
@@ -128,7 +133,7 @@ void Graphics::processInput(){
 		glfwSetWindowShouldClose(window, 1);
 }
 
-glm::vec2 Graphics::getMouseTile(Map & map, float height = 0.f){
+glm::vec2 Graphics::getMouseTile(float height = 0.f){
 	double mouseX, mouseY;
 	glfwGetCursorPos(window, &mouseX, &mouseY);
 	glm::vec3 win = glm::vec3( mouseX, WINDOW_HEIGHT - mouseY, -Z_DEPTH);
@@ -232,7 +237,7 @@ glm::vec3 randomVector(const glm::vec3 & refVec, float angle){
 	return glm::rotate(	glm::rotation(glm::vec3(0,0,1),normRef), randomVec)*glm::length(refVec);
 }
 
-void Graphics::drawMap(const Map * map,const glm::mat4 & VP, bool useTex, GLuint prog){
+void Graphics::drawMap(const glm::mat4 & VP, bool useTex, GLuint prog){
 	glBindVertexArray(map->getVao());
 	if(useTex){
 		glActiveTexture(GL_TEXTURE0);
@@ -252,45 +257,48 @@ void Graphics::drawMap(const Map * map,const glm::mat4 & VP, bool useTex, GLuint
 	}
 }
 
+void Graphics::fire(){
+	const glm::vec2 mousePos = getMouseTile();
+	auto playerModel = player->getComponent<cModel>();
+	glm::vec3 diff = glm::vec3(mousePos.x, 0.2, mousePos.y) - glm::vec3(playerModel->getPosition().x + 0.5, 0.2, playerModel->getPosition().z + 0.5);
+	diff = randomVector(diff, 10);
+	projOffset = glm::translate(glm::mat4(), playerModel->getPosition() + glm::vec3(0.5, 0.2, 0.5));
+	projOffset = glm::scale(projOffset, diff);
+	const glm::vec3 start(projOffset * glm::vec4(0, 0, 0, 1)), end(projOffset*glm::vec4(1, 1, 1, 1));
+	projHit = glm::vec3(1, 0, 0);
+	for(auto & entity : entities){
+		if(rayModelIntersect(entity.getComponent<cModel>(), start, end))
+			projHit = glm::vec3(0, 1, 0);
+	}
+}
 void Graphics::update(double dt){
 	int fx;
 	while((fx = glGetError())!=GL_NO_ERROR)
 		std::cout<<"-OGL ERROR! "<<fx<<std::endl;
-	static Map map("test.bin");
-	static cModel building("cube.iqm");
-	building.setPosition(glm::vec3(3,0,2.5));
-	building.setRotation(0,M_PI,0);
+	auto playerModel = player->getComponent<cModel>();
 	//change this to be more broad, work using start and end rather than whatever it is now
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) ==GLFW_PRESS){
-		const glm::vec2 mousePos = getMouseTile(map);
-		glm::vec3 diff = glm::vec3(mousePos.x, 0.2, mousePos.y) - glm::vec3(player->getPosition().x+0.5,0.2, player->getPosition().z+0.5);
-		diff = randomVector(diff, 10);
-		projOffset = glm::translate(glm::mat4(), player->getPosition() + glm::vec3(0.5, 0.2, 0.5));
-		projOffset = glm::scale(projOffset, diff);
-		const glm::vec3 start( projOffset * glm::vec4(0,0,0,1)), end(projOffset*glm::vec4(1,1,1,1));
-		projHit = glm::vec3(1,0,0);
-		if(rayModelIntersect(&building, start, end))
-			projHit = glm::vec3(0,1,0);
+		fire();
 	}
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)==GLFW_PRESS){
-		glm::vec2 pos = getMouseTile(map);
-		player->setPosition(std::floor(pos.x), 0, std::floor(pos.y));
+		glm::vec2 pos = getMouseTile();
+		playerModel->setPosition(std::floor(pos.x), 0, std::floor(pos.y));
 	}
 	if(glfwGetKey(window, GLFW_KEY_W)==GLFW_PRESS){
-		auto pos = player->getPosition();
-		player->setPosition(pos.x, pos.y, pos.z-1*dt);
+		auto pos = playerModel->getPosition();
+		playerModel->setPosition(pos.x, pos.y, pos.z-1*dt);
 	}
 	if(glfwGetKey(window, GLFW_KEY_S)==GLFW_PRESS){
-		auto pos = player->getPosition();
-		player->setPosition(pos.x, pos.y, pos.z+1*dt);
+		auto pos = playerModel->getPosition();
+		playerModel->setPosition(pos.x, pos.y, pos.z+1*dt);
 	}
 	if(glfwGetKey(window, GLFW_KEY_A)==GLFW_PRESS){
-		auto pos = player->getPosition();
-		player->setPosition(pos.x-1*dt, pos.y, pos.z);
+		auto pos = playerModel->getPosition();
+		playerModel->setPosition(pos.x-1*dt, pos.y, pos.z);
 	}
 	if(glfwGetKey(window, GLFW_KEY_D)==GLFW_PRESS){
-		auto pos = player->getPosition();
-		player->setPosition(pos.x+1*dt, pos.y, pos.z);
+		auto pos = playerModel->getPosition();
+		playerModel->setPosition(pos.x+1*dt, pos.y, pos.z);
 	}
 	//Shadow shit
 	//glCullFace(GL_FRONT);
@@ -298,7 +306,7 @@ void Graphics::update(double dt){
 	glViewport(0,0,SHADOW_CUBE_SIZE,SHADOW_CUBE_SIZE);
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFrameBuffer);
 	glUseProgram(shadowProgram);
-	const glm::vec3 lightPos = player->getPosition() + glm::vec3(0.5,0.3, 0.5);
+	const glm::vec3 lightPos = playerModel->getPosition() + glm::vec3(0.5,0.3, 0.5);
 	for(int i = 0; i < 6; i++){
 		//	i = i*2;
 		//for now, I think I will n eed all sides later
@@ -308,8 +316,9 @@ void Graphics::update(double dt){
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, shadowCubemap,0);
 		glClear( GL_DEPTH_BUFFER_BIT);
 		//unneeded ATM cuz map doesnt obscure anything(nohting below it)
-		drawMap(&map, wuew, false, shadowProgram);
-		building.draw(wuew, false, shadowProgram);
+		drawMap(wuew, false, shadowProgram);
+		for (auto & entity : entities)
+			entity.getComponent<cModel>()->draw(wuew, false, shadowProgram);
 	}
 
 	//Normal draw shit
@@ -324,25 +333,27 @@ void Graphics::update(double dt){
 	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowCubemap);
 	glUniform3fv(glGetUniformLocation(firstPassProgram, "lightPos"), 1, glm::value_ptr(lightPos));
 	const glm::mat4 VP = baseProjection * baseView;
-	drawMap(&map, VP, true, firstPassProgram);
+	drawMap(VP, true, firstPassProgram);
 
-	player->draw(VP, true, firstPassProgram, &glm::vec3(1), 1);
+	playerModel->draw(VP, true, firstPassProgram, &glm::vec3(1), 1);
 	glm::vec3 colors[5] = {
 		glm::vec3(0.5),
 		glm::vec3(0,0.8,0.7),
 		glm::vec3(0.5),
 		glm::vec3(0.5),
 		glm::vec3(0.5)};
-	building.draw(VP, true, firstPassProgram, colors, 5);
+	for (auto & entity : entities)
+		entity.getComponent<cModel>()->draw(VP, true, firstPassProgram, colors, 5);
 
 	
 	glBlendFunc(GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA);
 	glUseProgram(secondPassProgram);
-	drawMap(&map, VP, true, secondPassProgram);
+	drawMap(VP, true, secondPassProgram);
 
-	player->draw(VP, true, secondPassProgram, &glm::vec3(1), 1);
+	playerModel->draw(VP, true, secondPassProgram, &glm::vec3(1), 1);
 
-	building.draw( VP, true, secondPassProgram, colors, 5);
+	for(auto & entity: entities)
+		entity.getComponent<cModel>()->draw(VP, true, secondPassProgram, colors, 5);
 
 
 
@@ -357,4 +368,4 @@ void Graphics::update(double dt){
 }
 
 bool Graphics::isOpen(){return !glfwWindowShouldClose(window);}
-void Graphics::setPlayer(cModel * p){player = p;}
+void Graphics::setPlayer(Entity * p){player = p;}

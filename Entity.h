@@ -7,8 +7,10 @@
 class Entity{
 	std::unordered_map<std::type_index, std::unique_ptr<cBase>> components;
 	Entity(const Entity &) = delete;
+	Entity & operator= (const Entity &) = delete;
 public:
 	Entity() = default;
+	Entity(Entity && other);
 	template <class T, typename ... Args>
 	void addComponent(Args&&... args){
 		static_assert(std::is_base_of<cBase, T>::value, "Attempted to add a non-component");

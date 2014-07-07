@@ -101,7 +101,8 @@ TextureManager::Texture::Texture(std::string name, bool sRGB){
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
 	int width, height, channels;
-	unsigned char* image = SOIL_load_image(name.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);	if(sRGB)
+	unsigned char* image = SOIL_load_image(name.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);
+	if(sRGB)
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 	else
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
@@ -269,7 +270,8 @@ const GLuint TextureManager::loadTexture(std::string name, bool sRGB){
 //	}
 //};
 //
-//bool parseObj(string name, vector<glm::vec3> & positions, vector<glm::vec2> & textures, vector<glm::vec3> & normals, vector<VertexData> & vertexData, vector<std::pair<string, int> > & matCalls, map<string, Material> & matLib, vector<std::pair<string, int> > & groups){//	std::cout<<"Loading file " + name<<std::endl;
+//bool parseObj(string name, vector<glm::vec3> & positions, vector<glm::vec2> & textures, vector<glm::vec3> & normals, vector<VertexData> & vertexData, vector<std::pair<string, int> > & matCalls, map<string, Material> & matLib, vector<std::pair<string, int> > & groups){
+//	std::cout<<"Loading file " + name<<std::endl;
 //	std::ifstream file;
 //	file.open(name);
 //	if(file.fail()){

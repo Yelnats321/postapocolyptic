@@ -13,8 +13,8 @@ public:
 			return -1;
 		return mapData[x+y*width];
 	}
-	unsigned int getWidth() const;
-	unsigned int getHeight() const;
-	GLuint getTexture() const;
-	GLuint getVao() const;
+	unsigned int getWidth() const{ return width; }
+	unsigned int getHeight() const{ return height; }
+	GLuint getTexture() const{ return texture; }
+	GLuint getVao() const{ return vao; }
 };

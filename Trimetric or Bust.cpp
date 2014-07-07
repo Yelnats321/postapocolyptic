@@ -4,7 +4,8 @@
 
 int main(){
 	Graphics graphics;
-	cModel player("stalker.iqm");
+	Entity player;
+	player.addComponent<cModel>("stalker.iqm");
 	graphics.setPlayer(&player);
 	double time = glfwGetTime();
 	while(graphics.isOpen()){
