@@ -1,5 +1,6 @@
 #pragma once
 #include "Map.h"
+#include "cProjectile.h"
 class Entity;
 //If the const matrixes break, it's cuz you defined the consts it relies on AFTER it, becasue of some magic shit in C++
 class Graphics{
@@ -9,12 +10,13 @@ class Graphics{
 	const glm::mat4 baseView, baseProjection;
 	GLuint shadowFrameBuffer, shadowCubemap, shadowProgram;
 	GLuint projVao, projVbo;
-	glm::vec3 projHit;
-	glm::mat4 projOffset;
+	/*glm::vec3 projHit;
+	glm::mat4 projOffset;*/
 	glm::mat4 shadowMapViews[6];
 	Entity * player;
 	glm::vec2 getMouseTile(float);
 	std::vector<Entity> entities;
+	std::vector<cProjectile> projectiles;
 	Map* map;
 	void drawMap(const glm::mat4 & VP, bool useTex, GLuint prog);
 	void fire();

@@ -9,6 +9,7 @@ class TextureManager{
 		Texture(Texture &&);
 		~Texture();
 	};
+	TextureManager() = delete;
 	static std::unordered_map<std::string, Texture> textures;
 public:
 	static const GLuint loadTexture(std::string,bool isSRGB);

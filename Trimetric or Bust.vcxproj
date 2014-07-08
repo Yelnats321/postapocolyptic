@@ -83,6 +83,7 @@
   <ItemGroup>
     <ClInclude Include="AssetLoader.h" />
     <ClInclude Include="cBase.h" />
+    <ClInclude Include="cProjectile.h" />
     <ClInclude Include="Entity.h" />
     <ClInclude Include="EntityManager.h" />
     <ClInclude Include="Graphics.h" />
@@ -95,6 +96,7 @@
   <ItemGroup>
     <ClCompile Include="AssetLoader.cpp" />
     <ClCompile Include="cBase.cpp" />
+    <ClCompile Include="cProjectile.cpp" />
     <ClCompile Include="Entity.cpp" />
     <ClCompile Include="EntityManager.cpp" />
     <ClCompile Include="Graphics.cpp" />

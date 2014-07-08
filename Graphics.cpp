@@ -96,7 +96,6 @@ baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/18
 	//projectile test shit
 	GLfloat vert [] = {0,0,0,
 		1,1,1};
-	projHit = glm::vec3(1,0,0);
 	glGenVertexArrays(1, &projVao);
 	glBindVertexArray(projVao);
 	glGenBuffers(1, &projVbo);
@@ -261,15 +260,11 @@ void Graphics::fire(){
 	const glm::vec2 mousePos = getMouseTile();
 	auto playerModel = player->getComponent<cModel>();
 	glm::vec3 diff = glm::vec3(mousePos.x, 0.2, mousePos.y) - glm::vec3(playerModel->getPosition().x + 0.5, 0.2, playerModel->getPosition().z + 0.5);
-	diff = randomVector(diff, 10);
-	projOffset = glm::translate(glm::mat4(), playerModel->getPosition() + glm::vec3(0.5, 0.2, 0.5));
+	diff = glm::normalize(randomVector(diff, 10));
+	glm::mat4 projOffset = glm::translate(glm::mat4(), playerModel->getPosition() + glm::vec3(0.5, 0.2, 0.5));
 	projOffset = glm::scale(projOffset, diff);
 	const glm::vec3 start(projOffset * glm::vec4(0, 0, 0, 1)), end(projOffset*glm::vec4(1, 1, 1, 1));
-	projHit = glm::vec3(1, 0, 0);
-	for(auto & entity : entities){
-		if(rayModelIntersect(entity.getComponent<cModel>(), start, end))
-			projHit = glm::vec3(0, 1, 0);
-	}
+	projectiles.emplace_back(cProjectile{10, start, std::move(diff), std::move(projOffset)});
 }
 void Graphics::update(double dt){
 	int fx;
@@ -359,10 +354,35 @@ void Graphics::update(double dt){
 
 	glUseProgram(firstPassProgram);
 	glBindVertexArray(projVao);
-	glUniform3fv(glGetUniformLocation(firstPassProgram, "color"), 1, glm::value_ptr(projHit));
-	glUniformMatrix4fv(glGetUniformLocation(firstPassProgram, "M"), 1, GL_FALSE, glm::value_ptr(projOffset));
-	glUniformMatrix4fv(glGetUniformLocation(firstPassProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*projOffset));
-	glDrawArrays(GL_LINES, 0, 6);
+	glUniform3fv(glGetUniformLocation(firstPassProgram, "color"), 1, glm::value_ptr(glm::vec3(1, 1, 0)));
+	for(auto itr = projectiles.begin(); itr != projectiles.end();){
+		glm::vec3 end = itr->position + itr->direction*itr->speed / 60.f;
+		bool deleted = false;
+		if(itr->position.x < 0 || itr->position.x > map->getWidth()*Map::SIZE ||
+		   itr->position.z < 0 || itr->position.z > map->getHeight()*Map::SIZE){
+			deleted = true;
+		}
+		if(!deleted){
+			for(auto & entity : entities){
+				if(rayModelIntersect(entity.getComponent<cModel>(), itr->position, end)){
+					deleted = true;
+					break;
+				}
+			}
+		}
+		if(deleted){
+			itr = projectiles.erase(itr);
+			continue;
+		}
+		itr->position = end;
+		itr->modelMatrix = glm::translate(glm::mat4(), itr->position);
+		itr->modelMatrix = glm::scale(itr->modelMatrix, itr->direction);
+
+		glUniformMatrix4fv(glGetUniformLocation(firstPassProgram, "M"), 1, GL_FALSE, glm::value_ptr(itr->modelMatrix));
+		glUniformMatrix4fv(glGetUniformLocation(firstPassProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*itr->modelMatrix));
+		glDrawArrays(GL_LINES, 0, 6);
+		++itr;
+	}
 	glfwPollEvents();
 	glfwSwapBuffers(window);
 }

@@ -5,6 +5,7 @@ class Map{
 	GLuint texture, vao, vbo, ebo;
 	std::vector<uint16_t> mapData;
 public:
+	static const int SIZE = 1;
 	Map(std::string name);
 	~Map();
 	inline const uint16_t Map::operator()(unsigned int x, unsigned int y) const{

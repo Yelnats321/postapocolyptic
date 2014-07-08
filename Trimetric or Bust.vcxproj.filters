@@ -48,6 +48,9 @@
     <ClInclude Include="EntityManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="cProjectile.h">
+      <Filter>Component System</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -79,6 +82,9 @@
     </ClCompile>
     <ClCompile Include="EntityManager.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cProjectile.cpp">
+      <Filter>Component System</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
