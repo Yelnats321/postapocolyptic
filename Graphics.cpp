@@ -1,8 +1,9 @@
 #include "stdafx.h"
-#include "cModel.h"
+#include "Model.h"
 #include "Graphics.h"
 #include "AssetLoader.h"
 #include "IQMFile.h"
+#include "EntityManager.h"
 #include <random>
 
 Graphics::Graphics():
@@ -92,37 +93,27 @@ baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/18
 	shadowMapViews[0] = glm::lookAt(glm::vec3(0), glm::vec3(1,0,0),glm::vec3(0,-1,0));
 	shadowMapViews[2] = glm::lookAt(glm::vec3(0), glm::vec3(0,1,0),glm::vec3(0,0,-1));
 	shadowMapViews[4] = glm::lookAt(glm::vec3(0), glm::vec3(0,0,1),glm::vec3(0,-1,0));
+	entityManager = new EntityManager;
+	Projectile::initialize();
 
-	//projectile test shit
-	GLfloat vert [] = {0,0,0,
-		1,1,1};
-	glGenVertexArrays(1, &projVao);
-	glBindVertexArray(projVao);
-	glGenBuffers(1, &projVbo);
-	glBindBuffer(GL_ARRAY_BUFFER, projVbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vert), vert, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(0);
-	Entity ent;
-	ent.addComponent<cModel>("cube.iqm");
-	auto building = ent.getComponent<cModel>();
-	building->setPosition(glm::vec3(3, 0, 2.5));
-	building->setRotation(0, M_PI, 0);
-	entities.emplace_back(std::move(ent));
+	Building building("cube.iqm");
+	building.setPosition(glm::vec3(3, 0, 2.5));
+	building.setRotation(0, M_PI, 0);
+	entityManager->addBuilding(std::move(building));
 
 	map = new Map("test.bin");
 }
 
 Graphics::~Graphics(){
 	delete map;
+	delete entityManager;
 	glDeleteTextures(1, &shadowCubemap);
 	glDeleteFramebuffers(1, &shadowFrameBuffer);
 	glDeleteProgram(shadowProgram);
 
 	glDeleteProgram(firstPassProgram);
 
-	glDeleteVertexArrays(1, &projVao);
-	glDeleteBuffers(1, &projVbo);
+	Projectile::close();
 
 	glfwTerminate();
 }
@@ -208,7 +199,7 @@ bool rayTriangleIntersect(const glm::vec3 & rayStart, const glm::vec3 & rayEnd,c
 	//return false;
 }
 
-bool rayModelIntersect(const cModel * model, const glm::vec3 & rayStart, const glm::vec3 & rayEnd){
+bool rayModelIntersect(const Model * model, const glm::vec3 & rayStart, const glm::vec3 & rayEnd){
 	const glm::mat4 invModel = glm::inverse(model->getModelMatrix());
 	const glm::vec3 invRS(invModel * glm::vec4(rayStart, 1)), invRE(invModel * glm::vec4(rayEnd, 1));
 	for(int i = 0; i< model->data->getNumTris(); i++){
@@ -258,23 +249,23 @@ void Graphics::drawMap(const glm::mat4 & VP, bool useTex, GLuint prog){
 
 void Graphics::fire(){
 	const glm::vec2 mousePos = getMouseTile();
-	auto playerModel = player->getComponent<cModel>();
+	auto playerModel = &entityManager->getPlayer();
 	glm::vec3 diff = glm::vec3(mousePos.x, 0.2, mousePos.y) - glm::vec3(playerModel->getPosition().x + 0.5, 0.2, playerModel->getPosition().z + 0.5);
 	diff = glm::normalize(randomVector(diff, 10));
 	glm::mat4 projOffset = glm::translate(glm::mat4(), playerModel->getPosition() + glm::vec3(0.5, 0.2, 0.5));
 	projOffset = glm::scale(projOffset, diff);
-	const glm::vec3 start(projOffset * glm::vec4(0, 0, 0, 1)), end(projOffset*glm::vec4(1, 1, 1, 1));
-	projectiles.emplace_back(cProjectile{10, start, std::move(diff), std::move(projOffset)});
+	glm::vec3 start(projOffset * glm::vec4(0, 0, 0, 1)), end(projOffset*glm::vec4(1, 1, 1, 1));
+	entityManager->addProjectile(Projectile(10, std::move(start), std::move(diff), std::move(projOffset)));
 }
 void Graphics::update(double dt){
 	int fx;
 	while((fx = glGetError())!=GL_NO_ERROR)
 		std::cout<<"-OGL ERROR! "<<fx<<std::endl;
-	auto playerModel = player->getComponent<cModel>();
 	//change this to be more broad, work using start and end rather than whatever it is now
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) ==GLFW_PRESS){
 		fire();
 	}
+	auto playerModel = &entityManager->getPlayer();
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)==GLFW_PRESS){
 		glm::vec2 pos = getMouseTile();
 		playerModel->setPosition(std::floor(pos.x), 0, std::floor(pos.y));
@@ -312,8 +303,10 @@ void Graphics::update(double dt){
 		glClear( GL_DEPTH_BUFFER_BIT);
 		//unneeded ATM cuz map doesnt obscure anything(nohting below it)
 		drawMap(wuew, false, shadowProgram);
-		for (auto & entity : entities)
-			entity.getComponent<cModel>()->draw(wuew, false, shadowProgram);
+		for (auto & entity : entityManager->getActors())
+			entity.draw(wuew, false, shadowProgram);
+		for(auto & entity : entityManager->getBuildings())
+			entity.draw(wuew, false, shadowProgram);
 	}
 
 	//Normal draw shit
@@ -337,8 +330,11 @@ void Graphics::update(double dt){
 		glm::vec3(0.5),
 		glm::vec3(0.5),
 		glm::vec3(0.5)};
-	for (auto & entity : entities)
-		entity.getComponent<cModel>()->draw(VP, true, firstPassProgram, colors, 5);
+
+	for(auto & entity : entityManager->getActors())
+		entity.draw(VP, true, firstPassProgram, colors, 5);
+	for(auto & entity : entityManager->getBuildings())
+		entity.draw(VP, true, firstPassProgram, colors, 5);
 
 	
 	glBlendFunc(GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA);
@@ -347,15 +343,15 @@ void Graphics::update(double dt){
 
 	playerModel->draw(VP, true, secondPassProgram, &glm::vec3(1), 1);
 
-	for(auto & entity: entities)
-		entity.getComponent<cModel>()->draw(VP, true, secondPassProgram, colors, 5);
-
-
+	for(auto & entity : entityManager->getActors())
+		entity.draw(VP, true, secondPassProgram, colors, 5);
+	for(auto & entity : entityManager->getBuildings())
+		entity.draw(VP, true, secondPassProgram, colors, 5);
 
 	glUseProgram(firstPassProgram);
-	glBindVertexArray(projVao);
+	glBindVertexArray(Projectile::getVao());
 	glUniform3fv(glGetUniformLocation(firstPassProgram, "color"), 1, glm::value_ptr(glm::vec3(1, 1, 0)));
-	for(auto itr = projectiles.begin(); itr != projectiles.end();){
+	for(auto itr = entityManager->getProjectiles().begin(); itr != entityManager->getProjectiles().end();){
 		glm::vec3 end = itr->position + itr->direction*itr->speed / 60.f;
 		bool deleted = false;
 		if(itr->position.x < 0 || itr->position.x > map->getWidth()*Map::SIZE ||
@@ -363,29 +359,24 @@ void Graphics::update(double dt){
 			deleted = true;
 		}
 		if(!deleted){
-			for(auto & entity : entities){
-				if(rayModelIntersect(entity.getComponent<cModel>(), itr->position, end)){
+			for(auto & entity : entityManager->getBuildings()){
+				if(rayModelIntersect(&entity, itr->position, end)){
 					deleted = true;
 					break;
 				}
 			}
 		}
 		if(deleted){
-			itr = projectiles.erase(itr);
+			itr = entityManager->getProjectiles().erase(itr);
 			continue;
 		}
 		itr->position = end;
 		itr->modelMatrix = glm::translate(glm::mat4(), itr->position);
 		itr->modelMatrix = glm::scale(itr->modelMatrix, itr->direction);
 
-		glUniformMatrix4fv(glGetUniformLocation(firstPassProgram, "M"), 1, GL_FALSE, glm::value_ptr(itr->modelMatrix));
-		glUniformMatrix4fv(glGetUniformLocation(firstPassProgram, "MVP"), 1, GL_FALSE, glm::value_ptr(VP*itr->modelMatrix));
-		glDrawArrays(GL_LINES, 0, 6);
+		itr->draw(VP, true, firstPassProgram);
 		++itr;
 	}
 	glfwPollEvents();
 	glfwSwapBuffers(window);
 }
-
-bool Graphics::isOpen(){return !glfwWindowShouldClose(window);}
-void Graphics::setPlayer(Entity * p){player = p;}

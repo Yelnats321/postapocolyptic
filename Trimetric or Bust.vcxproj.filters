@@ -13,43 +13,49 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Component System">
+    <Filter Include="Entities">
       <UniqueIdentifier>{f4f6dda1-c15f-4887-9763-522066a81a68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Renderer">
+      <UniqueIdentifier>{cc8d9a64-00aa-4f0e-9c8b-5bffc153d401}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Graphics.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AssetLoader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Map.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="IQMFile.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Projectile.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="Model.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="Building.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="Actor.h">
+      <Filter>Entities</Filter>
+    </ClInclude>
+    <ClInclude Include="Drawable.h">
+      <Filter>Entities</Filter>
     </ClInclude>
     <ClInclude Include="IQMGeometry.h">
-      <Filter>Header Files</Filter>
+      <Filter>Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="cModel.h">
-      <Filter>Component System</Filter>
+    <ClInclude Include="IQMFile.h">
+      <Filter>Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="cBase.h">
-      <Filter>Component System</Filter>
+    <ClInclude Include="Graphics.h">
+      <Filter>Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="Entity.h">
-      <Filter>Component System</Filter>
+    <ClInclude Include="AssetLoader.h">
+      <Filter>Renderer</Filter>
     </ClInclude>
     <ClInclude Include="EntityManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="cProjectile.h">
-      <Filter>Component System</Filter>
+      <Filter>Entities</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -59,32 +65,32 @@
     <ClCompile Include="Trimetric or Bust.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Graphics.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AssetLoader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Map.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Projectile.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="Model.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="Building.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="Actor.cpp">
+      <Filter>Entities</Filter>
+    </ClCompile>
+    <ClCompile Include="AssetLoader.cpp">
+      <Filter>Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics.cpp">
+      <Filter>Renderer</Filter>
+    </ClCompile>
     <ClCompile Include="IQMFile.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="cModel.cpp">
-      <Filter>Component System</Filter>
-    </ClCompile>
-    <ClCompile Include="cBase.cpp">
-      <Filter>Component System</Filter>
-    </ClCompile>
-    <ClCompile Include="Entity.cpp">
-      <Filter>Component System</Filter>
+      <Filter>Renderer</Filter>
     </ClCompile>
     <ClCompile Include="EntityManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="cProjectile.cpp">
-      <Filter>Component System</Filter>
+      <Filter>Entities</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
