@@ -17,7 +17,6 @@ class Graphics{
 	glm::vec2 getMouseTile(float);
 	EntityManager * entityManager;
 	Map* map;
-	void drawMap(const glm::mat4 & VP, bool useTex, GLuint prog);
 	void fire();
 public:
 	Graphics();

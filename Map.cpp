@@ -61,3 +61,23 @@ Map::~Map(){
 	glDeleteBuffers(1, &ebo);
 	glDeleteVertexArrays(1, &vao);
 }
+
+void Map::draw(const glm::mat4 & VP, bool useTex, GLuint prog){
+	glBindVertexArray(vao);
+	if(useTex){
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture);
+	}
+	for(unsigned int y = 0; y < height; y++){
+		for(unsigned int x = 0; x < width; x++){
+			glm::mat4 M = glm::translate(glm::mat4(), glm::vec3(x, 0, y));
+			glUniformMatrix4fv(glGetUniformLocation(prog, "M"), 1, GL_FALSE, glm::value_ptr(M));
+			glUniformMatrix4fv(glGetUniformLocation(prog, "MVP"), 1, GL_FALSE, glm::value_ptr(VP * M));
+			if(useTex){
+				glm::vec3 color(1);
+				glUniform3fv(glGetUniformLocation(prog, "color"), 1, glm::value_ptr(color));
+			}
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		}
+	}
+}

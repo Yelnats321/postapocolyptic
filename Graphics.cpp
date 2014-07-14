@@ -227,26 +227,6 @@ glm::vec3 randomVector(const glm::vec3 & refVec, float angle){
 	return glm::rotate(	glm::rotation(glm::vec3(0,0,1),normRef), randomVec)*glm::length(refVec);
 }
 
-void Graphics::drawMap(const glm::mat4 & VP, bool useTex, GLuint prog){
-	glBindVertexArray(map->getVao());
-	if(useTex){
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, map->getTexture());
-	}
-	for(unsigned int y = 0; y < map->getHeight(); y++){
-		for(unsigned int x = 0; x < map->getWidth(); x++){
-			glm::mat4 M = glm::translate(glm::mat4(), glm::vec3(x, 0, y));
-			glUniformMatrix4fv(glGetUniformLocation(prog, "M"), 1, GL_FALSE, glm::value_ptr(M));
-			glUniformMatrix4fv(glGetUniformLocation(prog, "MVP"), 1, GL_FALSE, glm::value_ptr(VP * M));
-			if(useTex){
-				glm::vec3 color(1);
-				glUniform3fv(glGetUniformLocation(prog, "color"), 1, glm::value_ptr(color));
-			}
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		}
-	}
-}
-
 void Graphics::fire(){
 	const glm::vec2 mousePos = getMouseTile();
 	auto playerModel = &entityManager->getPlayer();
@@ -302,7 +282,7 @@ void Graphics::update(double dt){
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, shadowCubemap,0);
 		glClear( GL_DEPTH_BUFFER_BIT);
 		//unneeded ATM cuz map doesnt obscure anything(nohting below it)
-		drawMap(wuew, false, shadowProgram);
+		map->draw(wuew, false, shadowProgram);
 		for (auto & entity : entityManager->getActors())
 			entity.draw(wuew, false, shadowProgram);
 		for(auto & entity : entityManager->getBuildings())
@@ -321,7 +301,7 @@ void Graphics::update(double dt){
 	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowCubemap);
 	glUniform3fv(glGetUniformLocation(firstPassProgram, "lightPos"), 1, glm::value_ptr(lightPos));
 	const glm::mat4 VP = baseProjection * baseView;
-	drawMap(VP, true, firstPassProgram);
+	map->draw(VP, true, firstPassProgram);
 
 	playerModel->draw(VP, true, firstPassProgram, &glm::vec3(1), 1);
 	glm::vec3 colors[5] = {
@@ -339,7 +319,7 @@ void Graphics::update(double dt){
 	
 	glBlendFunc(GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA);
 	glUseProgram(secondPassProgram);
-	drawMap(VP, true, secondPassProgram);
+	map->draw(VP, true, secondPassProgram);
 
 	playerModel->draw(VP, true, secondPassProgram, &glm::vec3(1), 1);
 
