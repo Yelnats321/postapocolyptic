@@ -1,5 +1,5 @@
 #include "stdafx.h"
 #include "EntityManager.h"
 
-EntityManager::EntityManager():player("stalker.iqm"){
+EntityManager::EntityManager():player("assets/stalker.iqm"){
 }

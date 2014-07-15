@@ -5,14 +5,17 @@ class ObjFile;*/
 class TextureManager{
 	struct Texture{
 		GLuint tex;
-		Texture(std::string, bool);
+		Texture(const std::string &, bool);
 		Texture(Texture &&);
 		~Texture();
 	};
 	TextureManager() = delete;
 	static std::unordered_map<std::string, Texture> textures;
 public:
-	static const GLuint loadTexture(std::string,bool isSRGB);
+	static const GLuint loadTexture(const std::string &, bool isSRGB);
 };
 //const ObjFile * loadFile(string);
-GLuint genShaders(std::string vertex, std::string fragment);
+namespace AssetLoader{
+GLuint genShaders(const std::string & vertex, const std::string & fragment);
+std::string getFilePath(const std::string &);
+}

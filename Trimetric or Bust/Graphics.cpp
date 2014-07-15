@@ -45,7 +45,7 @@ baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/18
 	glEnable(GL_BLEND);
 
 	try{
-		firstPassProgram = genShaders("shaders/vert.vert", "shaders/firstPass.frag");
+		firstPassProgram = AssetLoader::genShaders("shaders/vert.vert", "shaders/firstPass.frag");
 	}catch(const char * e){
 		std::cout<<"Normal shader compile failed: " << e<<std::endl;
 	}
@@ -56,12 +56,12 @@ baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/18
 	glUniform1f(glGetUniformLocation(firstPassProgram, "SHADOW_FAR"), SHADOW_FAR);
 
 	try{
-		secondPassProgram = genShaders("shaders/vert.vert", "shaders/secondPass.frag");
+		secondPassProgram = AssetLoader::genShaders("shaders/vert.vert", "shaders/secondPass.frag");
 	}catch(const char * e){
 		std::cout<<e<<std::endl;
 	}
 	try{
-		shadowProgram = genShaders("shaders/passShadow.vert", "shaders/passShadow.frag");
+		shadowProgram = AssetLoader::genShaders("shaders/passShadow.vert", "shaders/passShadow.frag");
 	}catch(const char * e){
 		std::cout << e<<std::endl;
 	}
@@ -96,12 +96,12 @@ baseView(glm::lookAt(glm::vec3(-std::sin(M_PI*36/180.f)*X_Y_DEPTH,sin(M_PI*34/18
 	entityManager = new EntityManager;
 	Projectile::initialize();
 
-	Building building("cube.iqm");
+	Building building("assets/cube.iqm");
 	building.setPosition(glm::vec3(3, 0, 2.5));
 	building.setRotation(0, M_PI, 0);
 	entityManager->addBuilding(std::move(building));
 
-	map = new Map("test.bin");
+	map = new Map("assets/test.bin");
 }
 
 Graphics::~Graphics(){

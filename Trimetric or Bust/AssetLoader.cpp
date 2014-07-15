@@ -26,7 +26,7 @@ std::string getShaderError(GLuint shader){
 	return std::string(errorLog.begin(), errorLog.end());
 }
 
-GLuint genShaders(std::string vert, std::string frag){
+GLuint AssetLoader::genShaders(const std::string & vert, const std::string & frag){
 	std::ifstream file;
 
 	std::string vertexSource, fragmentSource;
@@ -95,8 +95,13 @@ GLuint genShaders(std::string vert, std::string frag){
 
 	return shaderProg;
 }
+//this probably doesn't work for something like "C:/file.txt/"
+std::string AssetLoader::getFilePath(const std::string & file){
+	size_t pos = file.find_first_of("\\/");
+	return(std::string::npos == pos) ? "" : file.substr(0, pos+1);
+}
 
-TextureManager::Texture::Texture(std::string name, bool sRGB){
+TextureManager::Texture::Texture(const std::string & name, bool sRGB){
 	tex = 0;
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
@@ -127,7 +132,7 @@ TextureManager::Texture::~Texture(){
 	glDeleteTextures(1, &tex);
 }
 std::unordered_map<std::string, TextureManager::Texture> TextureManager::textures;
-const GLuint TextureManager::loadTexture(std::string name, bool sRGB){
+const GLuint TextureManager::loadTexture(const std::string & name, bool sRGB){
 	if(textures.find(name) != textures.end()){
 		std::cout<<"Returned loaded texture \"" +name + "\" at location "<<textures.at(name).tex<<std::endl;
 	}

@@ -46,6 +46,7 @@ Map::Map(std::string name){
 	std::string imgName;
 	imgName.resize(size);
 	file.read((char*)&imgName[0], size);
+	imgName = AssetLoader::getFilePath(name) + imgName;
 	texture = TextureManager::loadTexture(imgName, false);
 	file.read((char *)&width, 2);
 	std::cout << width << std::endl;

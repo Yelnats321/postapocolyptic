@@ -255,10 +255,11 @@ void IQMFile::loadmeshes(std::string & filename, const iqmheader &hdr){
 	for(int i = 0; i < (int)hdr.num_meshes; i++)
 	{
 		const iqmmesh &m = meshes[i];
+		const std::string path = AssetLoader::getFilePath(filename);
 		try{
-			textures[i] = TextureManager::loadTexture(&str[m.material], false);
+			textures[i] = TextureManager::loadTexture(path+&str[m.material], false);
 		}catch(const char * e){
-			std::cout<< "Error loading texture \""<<&str[m.material]<<"\" in file \""<<filename<< "\" due to " <<e<<std::endl;
+			std::cout << "Error loading texture \"" << path + &str[m.material] << "\" in file \"" << filename << "\" due to " << e << std::endl;
 		}
 	}
 
