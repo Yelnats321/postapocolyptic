@@ -1,0 +1,11 @@
+*.dll
+*.exe
+*.pdb
+*.ipch
+*.opensdf
+*.sdf
+*.sln
+*.suo
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
