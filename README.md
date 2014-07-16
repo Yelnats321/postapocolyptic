@@ -1,4 +1,4 @@
-postapocolyptic
+Winter Waste
 ===============
 
 A game inspired by Fallout and STALKER.
